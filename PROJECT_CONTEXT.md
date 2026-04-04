@@ -19,12 +19,11 @@ The Cinema Reputation Monitor is a specialized web application designed to scrap
 
 ## Key Components & Logic
 - **`src/lib/scraper.ts`**: The core logic that reads PlaceIDs from `data/PlaceIDdata.csv`, fetches data from SerpAPI, and performs upserts into Prisma.
-- **`src/components/DashboardClient.tsx`**: The main UI entry point. Handles:
-  - Global vs. Branch-specific views.
-  - Intelligent Insight Feed with tag and rating filtering.
-  - Reputation Momentum charts using Recharts.
-  - Multi-sheet Excel export (Overview + Branch details).
-  - Sync Overlay to prevent UI crashes during background scraping.
+- **`src/components/DashboardClient.tsx`**: The main UI shell that orchestrates state via the custom hook `useDashboardData`. It renders modular components from the `src/components/dashboard/` directory:
+  - **`layout/`**: `DashboardSidebar` (Navigation, Search, Export) & `DashboardHeader` (Theme, Sync, Title).
+  - **`views/`**: `GlobalView` (Network Reputation, Heatmap) & `BranchView` (Sentiment, Momentum Charts, Intelligent Feed).
+  - **`components/`**: `SyncOverlay` (Background scraping block UI) & `ReviewCard` (Individual review visualizer).
+  - **`hooks/useDashboardData.ts`**: Contains all complex state management locally (`useMemo` data pipelines for metrics, momentum, and search filters).
 
 ## Implementation Details
 ### Syncing Overlay
@@ -48,7 +47,9 @@ Heuristic-based tagging categorizes reviews into:
 ├── scripts/              # Utility scripts
 ├── src/
 │   ├── app/              # Next.js App Router (Layouts, Pages, API)
-│   ├── components/       # UI Components (DashboardClient, etc.)
+│   ├── components/       # UI Components
+│   │   ├── dashboard/    # Sub-modules (layout, views, hooks, components)
+│   │   └── DashboardClient.tsx # Main orchestrator
 │   └── lib/              # Logic utilities (Scraper, Prisma client)
 └── PROJECT_CONTEXT.md    # This file (Architectural Documentation)
 ```
