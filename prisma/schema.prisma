@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Cinema {
+  id      String               @id @default(uuid())
+  placeId String               @unique
+  name    String
+  metrics BranchDailyMetrics[]
+  reviews Review[]
+}
+
+model BranchDailyMetrics {
+  id            String   @id @default(uuid())
+  cinemaId      String
+  date          String
+  totalReviews  Int
+  averageRating Float
+  createdAt     DateTime @default(now())
+  cinema        Cinema   @relation(fields: [cinemaId], references: [id])
+
+  @@unique([cinemaId, date])
+}
+
+model Review {
+  id              String    @id @default(uuid())
+  reviewId        String    @unique
+  cinemaId        String
+  rating          Int
+  text            String?
+  translated      String?
+  authorName      String
+  authorThumbnail String?
+  authorLink      String?
+  contributorId   String?
+  localGuide      Boolean?
+  likes           Int?
+  link            String?
+  source          String?
+  date            String
+  isoDate         DateTime?
+  position        Int?
+  cinema          Cinema    @relation(fields: [cinemaId], references: [id])
+}
