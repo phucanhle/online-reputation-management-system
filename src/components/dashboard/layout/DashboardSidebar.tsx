@@ -128,7 +128,8 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
               >
                 <div className="flex items-center gap-3 overflow-hidden pr-6">
                   <Building2 className={`w-4 h-4 flex-shrink-0 ${viewMode === 'branch' && activeTab === c.placeId ? 'text-indigo-400' : ''}`} />
-                  <span className="text-xs font-bold truncate">{c.name}</span>
+                  <span className="text-xs font-bold truncate lg:hidden">{c.name.replace(/Lotte Cinema\s*/gi, '').trim() || c.name}</span>
+                  <span className="text-xs font-bold truncate hidden lg:block">{c.name}</span>
                 </div>
                 <div className="flex flex-col items-end gap-0.5 min-w-[50px]">
                   {c.currentAverageRating > 0 && <span className="text-[10px] font-black text-amber-500 tabular-nums">{c.currentAverageRating.toFixed(1)}</span>}
