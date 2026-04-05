@@ -145,7 +145,8 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                     </div>
                      <div className="flex-1 min-w-0 overflow-hidden flex flex-col pt-1">
                        <div className="flex items-center gap-2 group/title">
-                         <p className="text-[11px] font-black text-rose-500 uppercase tracking-[0.15em] leading-tight mb-2 truncate max-w-[80%]">{alert.cinemaName}</p>
+                         <p className="text-[11px] font-black text-rose-500 uppercase tracking-[0.15em] leading-tight mb-2 truncate max-w-[80%] lg:hidden" title={alert.cinemaName}>{alert.cinemaName?.replace(/Lotte Cinema\s*/gi, '').trim() || alert.cinemaName}</p>
+                         <p className="text-[11px] font-black text-rose-500 uppercase tracking-[0.15em] leading-tight mb-2 truncate max-w-[80%] hidden lg:block" title={alert.cinemaName}>{alert.cinemaName}</p>
                          <a 
                            href={alert.mapsSearchUrl} 
                            target="_blank" 
