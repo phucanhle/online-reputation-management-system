@@ -97,19 +97,19 @@ export default function GlobalView({ state }: { state: DashboardState }) {
       </div>
 
       <div className="bg-black/5 dark:bg-white/[0.03] border border-card-border p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] flex flex-col gap-8 glass">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <h3 className="font-black italic text-xl flex items-center gap-3 text-primary">
-            <AlertTriangle className="text-rose-500 animate-pulse" />
+            <AlertTriangle className="text-rose-500 animate-pulse shrink-0" />
             Global Critical Feed
           </h3>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <button 
               onClick={() => setCriticalSort(s => s === 'date' ? 'rating' : 'date')}
-              className={`px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${criticalSort === 'date' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}
+              className={`whitespace-nowrap px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${criticalSort === 'date' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}
             >
               {criticalSort === 'date' ? 'Newest First' : 'Lowest First'}
             </button>
-            <div className="px-4 py-1 bg-rose-500/10 border border-rose-500/20 rounded-full text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] animate-pulse">
+            <div className="whitespace-nowrap px-4 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] animate-pulse">
               Live Monitoring Sequence
             </div>
           </div>
