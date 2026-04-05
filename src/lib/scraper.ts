@@ -1,7 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import csv from 'csv-parser';
-import fs from 'fs';
-import path from 'path';
+
 import { getJson } from 'serpapi';
 
 const prisma = new PrismaClient();
@@ -20,30 +18,16 @@ export type SyncProgress = { cinema: string, status: 'loading' | 'success' | 'er
 export async function runScraper(onProgress?: (p: SyncProgress) => void) {
     console.log("Starting scrape...");
     
-    // We should use process.cwd() as Next.js API routes run relative to the project root
-    const csvPath = path.join(process.cwd(), 'data', 'PlaceIDdata.csv');
-    const branches: { name: string, placeId: string }[] = [];
-
-    // 1. Read CSV
-    await new Promise<void>((resolve, reject) => {
-        if (!fs.existsSync(csvPath)) {
-            return reject(new Error(`CSV file not found at ${csvPath}`));
-        }
-        fs.createReadStream(csvPath)
-            .pipe(csv())
-            .on("data", (row) => {
-                if (row["Place Id"]) {
-                    branches.push({
-                        name: row["Cinema names"],
-                        placeId: row["Place Id"].trim()
-                    });
-                }
-            })
-            .on("end", () => resolve())
-            .on("error", (err) => reject(err));
+    // 1. Fetch cinemas from Database instead of CSV
+    const branches = await prisma.cinema.findMany({
+        select: { name: true, placeId: true },
     });
 
-    console.log(`Read ${branches.length} branches from CSV.`);
+    if (branches.length === 0) {
+        throw new Error("No branches found in database to scrape. Please ensure the Cinema table has data.");
+    }
+
+    console.log(`Loaded ${branches.length} branches from Database.`);
 
     let totalNewReviews = 0;
     let totalSkippedReviews = 0;
