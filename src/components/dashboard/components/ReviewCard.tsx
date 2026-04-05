@@ -66,7 +66,7 @@ export default function ReviewCard({ review: r, highlightedReviewId }: { review:
             <div className="flex items-center gap-1.5 text-secondary">
               <CalendarDays className="w-3.5 h-3.5" />
               <span className="text-[10px] font-bold uppercase tracking-tight">
-                {new Date(r.isoDate).toLocaleDateString('vi-VN', { year: 'numeric', month: 'short', day: 'numeric' })}
+                {new Date(r.isoDate).toLocaleDateString('vi-VN')}
               </span>
             </div>
           )}
