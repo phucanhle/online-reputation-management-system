@@ -17,7 +17,7 @@ export type SyncProgress = { cinema: string, status: 'loading' | 'success' | 'er
 
 export async function runScraper(onProgress?: (p: SyncProgress) => void) {
     console.log("Starting scrape...");
-    
+
     // 1. Fetch cinemas from Database instead of CSV
     const branches = await prisma.cinema.findMany({
         select: { name: true, placeId: true },
@@ -39,7 +39,7 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
         console.log(`Processing Batch ${i + 1} of ${batches.length}...`);
 
         const batchPromises = batch.map(async (branch) => {
-            if (onProgress) onProgress({ cinema: branch.name, status: 'loading' });
+            if (onProgress) onProgress({ cinema: branch.name || 'Unknown Branch', status: 'loading' });
             try {
                 // Ensure cinema exists in DB with latest stats from Google
                 const response = await getJson({
@@ -51,14 +51,14 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                 });
 
                 const totalReviewsCount = response.place_info?.reviews || response.search_information?.total_results || 0;
-                
+
                 // Robust extraction: some results might have rating as string or in different place
                 let avgRating = 0;
                 const rawRating = response.place_info?.rating;
                 if (rawRating !== undefined && rawRating !== null) {
                     avgRating = typeof rawRating === 'string' ? parseFloat(rawRating) : Number(rawRating);
                 }
-                
+
                 if (isNaN(avgRating)) avgRating = 0;
 
                 const safeName = branch.name || response.place_info?.title || `Unknown Cinema (${branch.placeId})`;
@@ -67,11 +67,11 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                 // 3. Upsert cinema (Static Dimension)
                 const cinema = await prisma.cinema.upsert({
                     where: { placeId: branch.placeId },
-                    update: { 
+                    update: {
                         name: safeName
                     },
-                    create: { 
-                        placeId: branch.placeId, 
+                    create: {
+                        placeId: branch.placeId,
                         name: safeName
                     },
                 });
@@ -82,7 +82,7 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                 await prisma.branchDailyMetrics.upsert({
                     where: {
                         cinemaId_date: {
-                            cinemaId: cinema.id,
+                            cinemaId: cinema.placeId,
                             date: dateStr,
                         }
                     },
@@ -91,7 +91,7 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                         averageRating: avgRating
                     },
                     create: {
-                        cinemaId: cinema.id,
+                        cinemaId: cinema.placeId,
                         date: dateStr,
                         totalReviews: totalReviewsCount,
                         averageRating: avgRating
@@ -104,15 +104,25 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
 
                 for (const r of reviews) {
                     if (!r.review_id) continue;
-                    
+
                     const existing = await prisma.review.findUnique({
-                        where: { reviewId: r.review_id }
+                        where: {
+                            reviewId_cinemaId: {
+                                reviewId: r.review_id,
+                                cinemaId: cinema.placeId
+                            }
+                        }
                     });
 
                     if (existing) {
                         // Update existing review stats like "likes" if they changed
                         await prisma.review.update({
-                            where: { reviewId: r.review_id },
+                            where: {
+                                reviewId_cinemaId: {
+                                    reviewId: r.review_id,
+                                    cinemaId: cinema.placeId
+                                }
+                            },
                             data: {
                                 likes: r.likes || 0,
                                 rating: r.rating || 0,
@@ -132,19 +142,21 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                                 likes: r.likes || 0,
                                 date: r.date || "",
                                 isoDate: r.iso_date || null,
+                                createdDate: new Date().toISOString(),
+                                lastModified: new Date().toISOString(),
                             }
                         });
                         newCount++;
                     }
                 }
 
-                if (onProgress) onProgress({ cinema: branch.name, status: 'success' });
-                return { cinema: branch.name, newCount, skipCount, error: false };
+                if (onProgress) onProgress({ cinema: branch.name || 'Unknown', status: 'success' });
+                return { cinema: branch.name || 'Unknown', newCount, skipCount, error: false };
             } catch (err) {
                 const e = err as Error;
                 console.error(`Error processing ${branch.name}:`, e.message);
-                if (onProgress) onProgress({ cinema: branch.name, status: 'error', message: e.message });
-                return { cinema: branch.name, newCount: 0, skipCount: 0, error: true, message: e.message };
+                if (onProgress) onProgress({ cinema: branch.name || 'Unknown', status: 'error', message: e.message });
+                return { cinema: branch.name || 'Unknown', newCount: 0, skipCount: 0, error: true, message: e.message };
             }
         });
 
