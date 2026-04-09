@@ -3,12 +3,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../final-data.db"
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
 }
 
 model Cinema {
-  placeId         String           @id @map("place_id")
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  placeId         String           @unique @map("place_id")
   name            String?          @map("place_name")
   originalUrl     String?          @map("original_url")
   resolvedUrl     String?          @map("resolved_url")
@@ -29,7 +30,7 @@ model Cinema {
 }
 
 model BranchDailyMetrics {
-  id            String   @id @default(uuid())
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
   cinemaId      String   @map("place_id")
   date          String
   totalReviews  Int      @map("total_reviews")
@@ -42,6 +43,7 @@ model BranchDailyMetrics {
 }
 
 model Review {
+  id                 String          @id @default(auto()) @map("_id") @db.ObjectId
   reviewId           String          @unique @map("review_id")
   cinemaId           String          @map("place_id")
   authorName         String?         @map("author")
@@ -58,8 +60,8 @@ model Review {
   ownerResponses     String?         @map("owner_responses")
   createdDate        String          @map("created_date")
   lastModified       String          @map("last_modified")
-  lastSeenSession    Int?            @map("last_seen_session")
-  lastChangedSession Int?            @map("last_changed_session")
+  lastSeenSession    String?         @map("last_seen_session")
+  lastChangedSession String?         @map("last_changed_session")
   isDeleted          Int?            @default(0) @map("is_deleted")
   contentHash        String?         @map("content_hash")
   engagementHash     String?         @map("engagement_hash")
@@ -67,10 +69,10 @@ model Review {
   
   cinema             Cinema          @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
   history            ReviewHistory[]
-  changedInSession   ScrapeSession?  @relation("LastChanged", fields: [lastChangedSession], references: [sessionId], onUpdate: NoAction)
-  seenInSession      ScrapeSession?  @relation("LastSeen", fields: [lastSeenSession], references: [sessionId], onUpdate: NoAction)
+  changedInSession   ScrapeSession?  @relation("LastChanged", fields: [lastChangedSession], references: [id], onUpdate: NoAction)
+  seenInSession      ScrapeSession?  @relation("LastSeen", fields: [lastSeenSession], references: [id], onUpdate: NoAction)
 
-  @@id([reviewId, cinemaId])
+  @@unique([reviewId, cinemaId])
   @@index([lastChangedSession], map: "idx_reviews_changed_session")
   @@index([cinemaId, lastModified], map: "idx_reviews_modified")
   @@index([cinemaId, isDeleted], map: "idx_reviews_deleted")
@@ -81,7 +83,8 @@ model Review {
 }
 
 model PlaceAlias {
-  aliasId     String  @id @map("alias_id")
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  aliasId     String  @unique @map("alias_id")
   canonicalId String  @map("canonical_id")
   originalUrl String? @map("original_url")
   createdAt   String  @map("created_at")
@@ -92,10 +95,11 @@ model PlaceAlias {
 }
 
 model ReviewHistory {
-  historyId          Int            @id @default(autoincrement()) @map("history_id")
+  id                 String         @id @default(auto()) @map("_id") @db.ObjectId
+  historyId          String?        @map("history_id")
   reviewId           String         @map("review_id")
   cinemaId           String         @map("place_id")
-  sessionId          Int?           @map("session_id")
+  sessionId          String?        @map("session_id")
   actor               String         @default("scraper")
   action              String
   changedFields      String?        @map("changed_fields")
@@ -104,7 +108,7 @@ model ReviewHistory {
   oldEngagementHash   String?        @map("old_engagement_hash")
   newEngagementHash   String?        @map("new_engagement_hash")
   timestamp           String
-  session             ScrapeSession? @relation(fields: [sessionId], references: [sessionId], onUpdate: NoAction)
+  session             ScrapeSession? @relation(fields: [sessionId], references: [id], onUpdate: NoAction)
   cinema              Cinema         @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
   review              Review         @relation(fields: [reviewId], references: [reviewId], onDelete: Cascade, onUpdate: NoAction)
 
@@ -115,7 +119,7 @@ model ReviewHistory {
 }
 
 model SchemaVersion {
-  id          Int     @id @default(autoincrement())
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
   version     Int
   appliedAt   String  @map("applied_at")
   description String?
@@ -124,7 +128,8 @@ model SchemaVersion {
 }
 
 model ScrapeSession {
-  sessionId                                            Int                @id @default(autoincrement()) @map("session_id")
+  id                                                    String             @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId                                             Int?               @unique @map("session_id")
   cinemaId                                              String             @map("place_id")
   action                                                String             @default("scrape")
   startedAt                                            String             @map("started_at")
@@ -148,19 +153,20 @@ model ScrapeSession {
 }
 
 model SyncCheckpoint {
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
   cinemaId            String           @map("place_id")
   target              String
   lastSyncedAt        String?          @map("last_synced_at")
-  lastSyncedSession   Int?             @map("last_synced_session")
+  lastSyncedSession   String?          @map("last_synced_session")
   cursorReviewId      String?          @map("cursor_review_id")
   cursorUpdatedAt     String?          @map("cursor_updated_at")
   attemptCount        Int?             @default(0) @map("attempt_count")
   status              String?          @default("ok")
   errorMessage        String?          @map("error_message")
-  session             ScrapeSession?   @relation(fields: [lastSyncedSession], references: [sessionId], onUpdate: NoAction)
+  session             ScrapeSession?   @relation(fields: [lastSyncedSession], references: [id], onUpdate: NoAction)
   cinema              Cinema           @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
 
-  @@id([cinemaId, target])
+  @@unique([cinemaId, target])
   @@index([target], map: "idx_sync_target")
   @@map("sync_checkpoints")
 }
