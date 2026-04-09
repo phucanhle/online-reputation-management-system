@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { getDb } from '@/lib/mongodb';
+import { Review } from '@/types/database';
+import { mapReview } from '@/lib/mappers';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,20 +11,21 @@ export async function GET(request: Request) {
   const skip = (page - 1) * limit;
 
   try {
-    const where = cinemaId ? { cinemaId } : {};
+    const db = await getDb();
+    const reviewsColl = db.collection<Review>('reviews');
+
+    const filter = cinemaId ? { place_id: cinemaId } : {}; // The DB has place_id, not cinemaId
 
     const [reviews, total] = await Promise.all([
-      prisma.review.findMany({
-        where,
-        orderBy: { isoDate: 'desc' } as any,
-        skip,
-        take: limit,
-      }),
-      prisma.review.count({ where }),
+      reviewsColl.find(filter as any).sort({ review_date: -1, isoDate: -1 } as any).skip(skip).limit(limit).toArray(),
+      reviewsColl.countDocuments(filter),
     ]);
 
+    // Map raw documents using the shared mapper
+    const serializedReviews = reviews.map(r => mapReview(r));
+
     return NextResponse.json({
-      reviews,
+      reviews: serializedReviews,
       total,
       page,
       limit,

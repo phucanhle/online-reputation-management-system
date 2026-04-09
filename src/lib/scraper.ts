@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
-
+import { getDb } from '@/lib/mongodb';
+import { Cinema, BranchDailyMetrics, Review } from '@/types/database';
 import { getJson } from 'serpapi';
 
-const prisma = new PrismaClient();
 const API_KEY = process.env.SERP_API_KEY || process.env.API_KEY || "";
 
 function chunkArray<T>(array: T[], size: number): T[][] {
@@ -18,13 +17,14 @@ export type SyncProgress = { cinema: string, status: 'loading' | 'success' | 'er
 export async function runScraper(onProgress?: (p: SyncProgress) => void) {
     console.log("Starting scrape...");
 
-    // 1. Fetch cinemas from Database instead of CSV
-    const branches = await prisma.cinema.findMany({
-        select: { name: true, placeId: true },
-    });
+    const db = await getDb();
+    
+    // 1. Fetch cinemas from Database
+    const branchesColl = db.collection<Cinema>('places');
+    const branches = await branchesColl.find({}, { projection: { name: 1, placeId: 1 } }).toArray();
 
     if (branches.length === 0) {
-        throw new Error("No branches found in database to scrape. Please ensure the Cinema table has data.");
+        throw new Error("No branches found in database to scrape. Please ensure the Cinema collection has data.");
     }
 
     console.log(`Loaded ${branches.length} branches from Database.`);
@@ -65,86 +65,77 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                 console.log(`[DATA] ${safeName}: Official Google Rating = ${avgRating}, Total Reviews = ${totalReviewsCount}`);
 
                 // 3. Upsert cinema (Static Dimension)
-                const cinema = await prisma.cinema.upsert({
-                    where: { placeId: branch.placeId },
-                    update: {
-                        name: safeName
+                await branchesColl.findOneAndUpdate(
+                    { placeId: branch.placeId },
+                    { 
+                        $setOnInsert: { placeId: branch.placeId },
+                        $set: { name: safeName, totalReviews: totalReviewsCount } 
                     },
-                    create: {
-                        placeId: branch.placeId,
-                        name: safeName
-                    },
-                });
+                    { upsert: true, returnDocument: 'after' }
+                );
 
                 const dateStr = new Date().toISOString().split('T')[0];
 
                 // 4. Upsert daily metrics snapshot (Fact Table - 1 record per day per cinema)
-                await prisma.branchDailyMetrics.upsert({
-                    where: {
-                        cinemaId_date: {
-                            cinemaId: cinema.placeId,
+                const metricsColl = db.collection<BranchDailyMetrics>('branch_daily_metrics');
+                await metricsColl.updateOne(
+                    { cinemaId: branch.placeId, date: dateStr },
+                    {
+                        $set: {
+                            totalReviews: totalReviewsCount,
+                            averageRating: avgRating
+                        },
+                        $setOnInsert: {
+                            cinemaId: branch.placeId,
                             date: dateStr,
+                            createdAt: new Date()
                         }
                     },
-                    update: {
-                        totalReviews: totalReviewsCount,
-                        averageRating: avgRating
-                    },
-                    create: {
-                        cinemaId: cinema.placeId,
-                        date: dateStr,
-                        totalReviews: totalReviewsCount,
-                        averageRating: avgRating
-                    }
-                });
+                    { upsert: true }
+                );
 
                 const reviews = response.reviews || [];
                 let newCount = 0;
                 let skipCount = 0;
 
+                const reviewsColl = db.collection<Review>('reviews');
+
                 for (const r of reviews) {
                     if (!r.review_id) continue;
 
-                    const existing = await prisma.review.findUnique({
-                        where: {
-                            reviewId_cinemaId: {
-                                reviewId: r.review_id,
-                                cinemaId: cinema.placeId
-                            }
-                        }
+                    const existing = await reviewsColl.findOne({
+                        reviewId: r.review_id,
+                        cinemaId: branch.placeId
                     });
 
                     if (existing) {
                         // Update existing review stats like "likes" if they changed
-                        await prisma.review.update({
-                            where: {
-                                reviewId_cinemaId: {
-                                    reviewId: r.review_id,
-                                    cinemaId: cinema.placeId
+                        await reviewsColl.updateOne(
+                            { reviewId: r.review_id, cinemaId: branch.placeId },
+                            {
+                                $set: {
+                                    likes: r.likes || 0,
+                                    rating: r.rating || 0,
+                                    lastModified: new Date().toISOString()
                                 }
-                            },
-                            data: {
-                                likes: r.likes || 0,
-                                rating: r.rating || 0,
                             }
-                        });
+                        );
                         skipCount++;
                     } else {
-                        await prisma.review.create({
-                            data: {
-                                reviewId: r.review_id,
-                                cinemaId: cinema.placeId,
-                                rating: r.rating || 0,
-                                text: r.snippet || r.extracted_snippet?.original || "",
-                                authorName: r.user?.name || "Unknown",
-                                authorThumbnail: r.user?.thumbnail || null,
-                                authorLink: r.user?.link || null,
-                                likes: r.likes || 0,
-                                date: r.date || "",
-                                isoDate: r.iso_date || null,
-                                createdDate: new Date().toISOString(),
-                                lastModified: new Date().toISOString(),
-                            }
+                        await reviewsColl.insertOne({
+                            reviewId: r.review_id,
+                            cinemaId: branch.placeId,
+                            rating: r.rating || 0,
+                            text: r.snippet || r.extracted_snippet?.original || "",
+                            authorName: r.user?.name || "Unknown",
+                            authorThumbnail: r.user?.thumbnail || null,
+                            authorLink: r.user?.link || null,
+                            likes: r.likes || 0,
+                            date: r.date || "",
+                            isoDate: r.iso_date || null,
+                            createdDate: new Date().toISOString(),
+                            lastModified: new Date().toISOString(),
+                            rowVersion: 1
                         });
                         newCount++;
                     }

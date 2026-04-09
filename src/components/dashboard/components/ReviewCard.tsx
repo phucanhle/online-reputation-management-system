@@ -21,8 +21,12 @@ function formatReviewDate(isoDate: string | null, rawDate: string | null) {
 
 function formatReviewText(text: string | null) {
   if (!text) return '';
-  const textInEn = JSON.parse(text)
-  return textInEn.en || "No descriptive text provided";
+  try {
+    const textInEn = JSON.parse(text);
+    return textInEn.vi || textInEn.en || Object.values(textInEn)[0] || text;
+  } catch (e) {
+    return text;
+  }
 }
 
 export default function ReviewCard({ review: r, highlightedReviewId }: { review: any, highlightedReviewId: string | null }) {

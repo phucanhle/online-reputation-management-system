@@ -83,11 +83,59 @@ export default function BranchView({ state }: { state: DashboardState }) {
           </div>
 
           <div className="bg-black/5 dark:bg-white/[0.03] border border-card-border p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] min-h-[400px] flex flex-col overflow-hidden">
-            <h3 className="font-black italic text-xl mb-8 flex items-center gap-2 text-primary"><TrendingUp className="text-emerald-400" /> Reputation Momentum (Fact-Table Timeline)</h3>
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-8 gap-4">
+              <h3 className="font-black italic text-xl flex items-center gap-2 text-primary">
+                <TrendingUp className="text-emerald-400" /> Reputation Momentum
+              </h3>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex items-center bg-black/10 dark:bg-white/5 border border-card-border rounded-xl p-1">
+                  {(['day', 'week', 'month'] as const).map(g => (
+                    <button
+                      key={g}
+                      onClick={() => state.setMomentumGranularity(g)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                        state.momentumGranularity === g 
+                          ? 'bg-indigo-600 text-white shadow-lg' 
+                          : 'text-secondary hover:text-primary'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 bg-black/10 dark:bg-white/5 p-1 rounded-xl border border-card-border relative z-20">
+                  <input
+                    type="date"
+                    value={state.momentumDateRange.start}
+                    onChange={e => state.setMomentumDateRange(prev => ({ ...prev, start: e.target.value }))}
+                    className="bg-transparent text-secondary text-xs uppercase font-bold tracking-widest outline-none cursor-pointer placeholder-secondary/50 px-2"
+                    title="Start Date"
+                  />
+                  <span className="text-secondary/50 font-black">-</span>
+                  <input
+                    type="date"
+                    value={state.momentumDateRange.end}
+                    onChange={e => state.setMomentumDateRange(prev => ({ ...prev, end: e.target.value }))}
+                    className="bg-transparent text-secondary text-xs uppercase font-bold tracking-widest outline-none cursor-pointer placeholder-secondary/50 px-2"
+                    title="End Date"
+                  />
+                  {(state.momentumDateRange.start || state.momentumDateRange.end) && (
+                    <button
+                      onClick={() => state.setMomentumDateRange({start: '', end: ''})}
+                      className="text-rose-400 hover:text-rose-500 hover:bg-rose-500/10 p-1.5 rounded-lg transition-all ml-1"
+                      title="Clear Date Filter"
+                    >
+                      <FilterX className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {momentumData.length >= 2 ? (
               <div className="w-full h-80">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                   <AreaChart data={momentumData}>
                     <defs>
                       <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
@@ -179,8 +227,8 @@ export default function BranchView({ state }: { state: DashboardState }) {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredReviews.slice(0, visibleReviewsCount).map((r: any) => (
-                <ReviewCard key={r.reviewId} review={r} highlightedReviewId={highlightedReviewId} />
+              {filteredReviews.slice(0, visibleReviewsCount).map((r: any, idx: number) => (
+                <ReviewCard key={r._id || r.reviewId || idx} review={r} highlightedReviewId={highlightedReviewId} />
               ))}
             </div>
 

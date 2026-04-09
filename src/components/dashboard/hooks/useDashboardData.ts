@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { safeParseDate, getTags } from '../utils';
 
 export function useDashboardData(
-  cinemas: any[], 
+  cinemas: any[],
   globalMetrics: { totalReviews: number, avgRating: number },
   branchAggregates: any[]
 ) {
@@ -23,11 +23,13 @@ export function useDashboardData(
   const [sidebarSort, setSidebarSort] = useState<'name' | 'rating-desc' | 'rating-asc'>('name');
   const [topicSort, setTopicSort] = useState<'rating-desc' | 'rating-asc'>('rating-desc');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [momentumGranularity, setMomentumGranularity] = useState<'day' | 'week' | 'month'>('day');
+  const [momentumDateRange, setMomentumDateRange] = useState<{start: string, end: string}>({start: '', end: ''});
   const [extraReviews, setExtraReviews] = useState<Record<string, any[]>>({});
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [reviewPages, setReviewPages] = useState<Record<string, number>>({});
   const [totalReviewsAvailable, setTotalReviewsAvailable] = useState<Record<string, number>>({});
-  
+
   // -- Debounced States for Search Optimization --
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
   const [debouncedCinemaSearchQuery, setDebouncedCinemaSearchQuery] = useState(cinemaSearchQuery);
@@ -61,8 +63,8 @@ export function useDashboardData(
   // --- Processed Cinemas with Latest Metrics ---
   const cinemasWithLatest = useMemo(() => {
     return cinemas.map(c => {
-      const agg = aggregateMap[c.placeId];
-      
+      const agg = aggregateMap[c.place_id];
+
       const currentTotalReviews = agg?.count || 0;
       const currentAverageRating = agg?.rating || 0;
 
@@ -81,14 +83,14 @@ export function useDashboardData(
   const loadMoreReviews = async (cinemaId: string) => {
     if (isLoadingMore) return;
     setIsLoadingMore(true);
-    
+
     const currentPage = reviewPages[cinemaId] || 1;
     const nextPage = currentPage + 1;
-    
+
     try {
       const res = await fetch(`/api/reviews?cinemaId=${cinemaId}&page=${nextPage}&limit=100`);
       const data = await res.json();
-      
+
       if (data.reviews) {
         setExtraReviews(prev => ({
           ...prev,
@@ -106,12 +108,12 @@ export function useDashboardData(
 
   const filteredCinemas = useMemo(() => {
     let result = cinemasWithLatest.filter(c =>
-      c.name.toLowerCase().includes(debouncedCinemaSearchQuery.toLowerCase())
+      (c.name || '').toLowerCase().includes(debouncedCinemaSearchQuery.toLowerCase())
     );
-    
+
     if (sidebarSort === 'rating-desc') result.sort((a, b) => b.currentAverageRating - a.currentAverageRating);
     else if (sidebarSort === 'rating-asc') result.sort((a, b) => a.currentAverageRating - b.currentAverageRating);
-    else result.sort((a, b) => a.name.localeCompare(b.name));
+    else result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     return result;
   }, [cinemasWithLatest, debouncedCinemaSearchQuery, sidebarSort]);
@@ -124,16 +126,16 @@ export function useDashboardData(
 
     cinemasWithLatest.forEach(c => {
       branchRatings.push({
-        name: c.name,
+        name: c.place_name,
         rating: c.currentAverageRating,
         count: c.currentTotalReviews,
-        placeId: c.placeId
+        placeId: c.place_id
       });
 
       c.reviews.forEach((r: any) => {
-        if (r.rating <= 2) recentNegative.push({ 
-          ...r, 
-          cinemaName: c.name, 
+        if (r.rating <= 2) recentNegative.push({
+          ...r,
+          cinemaName: c.name,
           placeId: c.placeId,
           mapsSearchUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.name)}&query_place_id=${c.placeId}`
         });
@@ -141,7 +143,7 @@ export function useDashboardData(
       });
     });
 
-    const leaderboard = [...branchRatings].sort((a, b) => 
+    const leaderboard = [...branchRatings].sort((a, b) =>
       leaderboardSort === 'top' ? b.rating - a.rating : a.rating - b.rating
     );
     const criticalAlerts = [...recentNegative].sort((a, b) => {
@@ -173,32 +175,65 @@ export function useDashboardData(
   const momentumData = useMemo(() => {
     if (!activeCinema) return [];
 
-    // Use official daily metrics for historical tracking
-    if (activeCinema.metrics && activeCinema.metrics.length > 0) {
-      return activeCinema.metrics.map((m: any) => ({
-        date: m.date,
-        count: m.totalReviews,
-        rating: m.averageRating,
-      }));
-    }
+    let sortedReviews = [...(activeCinema.reviews || [])];
+    
+    // Sort all available reviews chronologically oldest to newest for historical accumulation
+    sortedReviews.sort((a: any, b: any) => safeParseDate(a.isoDate) - safeParseDate(b.isoDate));
 
-    // Fallback pseudo-history based on loaded reviews
-    const sortedReviews = [...activeCinema.reviews].sort((a: any, b: any) =>
-      safeParseDate(a.isoDate) - safeParseDate(b.isoDate)
-    );
-
-    const monthlyData: { [key: string]: number } = {};
+    const timelineData: { [key: string]: { dateVal: Date, count: number, ratingSum: number, reviewCount: number } } = {};
     let runningTotal = (activeCinema.currentTotalReviews || 0) - sortedReviews.length;
     if (runningTotal < 0) runningTotal = 0;
 
     sortedReviews.forEach((r: any) => {
-      const month = new Date(r.isoDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      if (!r.isoDate) return;
+      let dateKey = '';
+      const dateObj = new Date(r.isoDate);
+      
+      if (momentumGranularity === 'day') {
+        dateKey = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } else if (momentumGranularity === 'week') {
+        const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const weekNo = Math.ceil(( ( (d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
+        dateKey = `W${weekNo} ${d.getUTCFullYear()}`;
+      } else {
+        dateKey = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      }
+
       runningTotal++;
-      monthlyData[month] = runningTotal;
+      
+      if (!timelineData[dateKey]) {
+        timelineData[dateKey] = { dateVal: dateObj, count: runningTotal, ratingSum: r.rating || 0, reviewCount: 1 };
+      } else {
+        timelineData[dateKey].count = runningTotal;
+        timelineData[dateKey].ratingSum += (r.rating || 0);
+        timelineData[dateKey].reviewCount += 1;
+      }
     });
 
-    return Object.entries(monthlyData).map(([date, count]) => ({ date, count }));
-  }, [activeCinema]);
+    let results = Object.entries(timelineData).map(([date, data]) => ({ 
+      date,
+      dateVal: data.dateVal,
+      count: data.count,
+      rating: data.reviewCount > 0 ? data.ratingSum / data.reviewCount : 0 
+    }));
+
+    // Filter by chosen Date Range
+    if (momentumDateRange.start) {
+      const startD = new Date(momentumDateRange.start);
+      // set to start of day
+      startD.setHours(0, 0, 0, 0);
+      results = results.filter(r => r.dateVal >= startD);
+    }
+    if (momentumDateRange.end) {
+      const endD = new Date(momentumDateRange.end);
+      endD.setHours(23, 59, 59, 999);
+      results = results.filter(r => r.dateVal <= endD);
+    }
+
+    return results;
+  }, [activeCinema, momentumGranularity, momentumDateRange]);
 
   const reviewVelocity = useMemo(() => {
     if (momentumData.length < 2) return 0;
@@ -218,7 +253,7 @@ export function useDashboardData(
   const filteredReviews = useMemo(() => {
     if (!activeCinema) return [];
     const q = debouncedSearchQuery.toLowerCase();
-    
+
     let result = activeCinema.reviews.filter((r: any) => {
       const ratingMatch = selectedRatings.length === 0 || selectedRatings.includes(r.rating);
       const textMatch = !q || (r.text?.toLowerCase().includes(q)) || (r.authorName?.toLowerCase().includes(q));
@@ -239,7 +274,7 @@ export function useDashboardData(
     if (highlightedReviewId) {
       // Ensure the highlighted review is visible
       setVisibleReviewsCount(prev => Math.max(prev, (filteredReviews.findIndex((r: any) => r.reviewId === highlightedReviewId) + 1) || 20));
-      
+
       setTimeout(() => {
         const el = document.getElementById(`review-${highlightedReviewId}`);
         if (el) {
@@ -269,6 +304,8 @@ export function useDashboardData(
     sidebarSort, setSidebarSort,
     topicSort, setTopicSort,
     isMobileSidebarOpen, setIsMobileSidebarOpen,
+    momentumGranularity, setMomentumGranularity,
+    momentumDateRange, setMomentumDateRange,
     debouncedSearchQuery,
     debouncedCinemaSearchQuery,
     cinemasWithLatest,
