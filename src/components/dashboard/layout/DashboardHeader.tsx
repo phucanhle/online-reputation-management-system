@@ -10,6 +10,7 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
     activeCinema,
     searchQuery, setSearchQuery,
     isSyncing, setIsSyncing,
+    setIsSyncModalOpen,
     setSyncLogs,
     setIsMobileSidebarOpen
   } = state;
@@ -140,7 +141,11 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
           ))}
         </button>
 
-        <button onClick={triggerSync} disabled={isSyncing} className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all shadow-lg active:scale-95 disabled:opacity-50 text-white">
+        <button 
+          onClick={() => setIsSyncModalOpen(true)} 
+          disabled={isSyncing} 
+          className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-2xl transition-all shadow-lg active:scale-95 disabled:opacity-50 text-white"
+        >
           {isSyncing ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCcw className="w-5 h-5" />}
         </button>
       </div>

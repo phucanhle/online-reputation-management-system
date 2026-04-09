@@ -7,6 +7,7 @@ import DashboardSidebar from './dashboard/layout/DashboardSidebar';
 import DashboardHeader from './dashboard/layout/DashboardHeader';
 import GlobalView from './dashboard/views/GlobalView';
 import BranchView from './dashboard/views/BranchView';
+import SyncModal from './dashboard/components/SyncModal';
 
 export default function DashboardClient({ 
   cinemas, 
@@ -24,6 +25,7 @@ export default function DashboardClient({
   return (
     <>
       <SyncOverlay state={state} />
+      <SyncModal state={state} />
 
       <div className="flex min-h-screen bg-background text-primary transition-colors duration-500">
         <DashboardSidebar state={state} />

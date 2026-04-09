@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { safeParseDate, getTags } from '../utils';
 
 export function useDashboardData(
@@ -6,6 +7,7 @@ export function useDashboardData(
   globalMetrics: { totalReviews: number, avgRating: number },
   branchAggregates: any[]
 ) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<'global' | 'branch'>('global');
   const [activeTab, setActiveTab] = useState<string>(cinemas[0]?.placeId || '');
@@ -16,6 +18,8 @@ export function useDashboardData(
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncLogs, setSyncLogs] = useState<any[]>([]);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
+  const [selectedCinemasForSync, setSelectedCinemasForSync] = useState<string[]>([]);
   const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
   const [leaderboardSort, setLeaderboardSort] = useState<'top' | 'bottom'>('top');
   const [visibleReviewsCount, setVisibleReviewsCount] = useState<number>(20);
@@ -286,6 +290,91 @@ export function useDashboardData(
     }
   }, [highlightedReviewId, filteredReviews]);
 
+  // --- Cloud Scrape Integration ---
+  const CLOUD_RUN_API = "https://google-review-craw-658219259966.europe-west1.run.app";
+  const CLOUD_RUN_API_KEY = process.env.NEXT_PUBLIC_CLOUD_RUN_API_KEY || "";
+
+  const startCloudSync = async (target: 'all' | 'selected') => {
+    setIsSyncing(true);
+    setIsSyncModalOpen(false);
+    setSyncLogs([]);
+
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+    };
+    if (CLOUD_RUN_API_KEY) {
+        headers['X-API-Key'] = CLOUD_RUN_API_KEY;
+    }
+
+    try {
+      if (target === 'all') {
+        setSyncLogs([{ cinema: 'Connecting to Cloud Cluster...', status: 'loading' }]);
+        await fetch(`${CLOUD_RUN_API}/trigger-all`, { headers });
+      } else {
+        setSyncLogs(selectedCinemasForSync.map(id => ({
+          cinema: cinemasWithLatest.find(c => c.placeId === id)?.name || id,
+          status: 'loading'
+        })));
+
+        // Call scrape for each selected
+        for (const id of selectedCinemasForSync) {
+            const cinema = cinemasWithLatest.find(c => c.placeId === id);
+            if (!cinema) continue;
+            
+            await fetch(`${CLOUD_RUN_API}/scrape`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ 
+                    url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cinema.name)}&query_place_id=${cinema.placeId}`,
+                    scrape_mode: 'update'
+                })
+            });
+        }
+      }
+
+      // Start Polling
+      pollJobStatus();
+    } catch (error) {
+      console.error('Failed to trigger cloud sync:', error);
+      setIsSyncing(false);
+    }
+  };
+
+  const pollJobStatus = async () => {
+    const headers: Record<string, string> = {};
+    if (CLOUD_RUN_API_KEY) {
+        headers['X-API-Key'] = CLOUD_RUN_API_KEY;
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${CLOUD_RUN_API}/jobs`, { headers });
+        const jobs = await res.json();
+        
+        const activeJobs = jobs.filter((j: any) => j.status === 'running' || j.status === 'pending');
+        
+        // Map jobs to logs
+        setSyncLogs(jobs.map((j: any) => ({
+            cinema: j.url.includes('query=') ? decodeURIComponent(j.url.split('query=')[1].split('&')[0]) : j.job_id,
+            status: j.status === 'completed' ? 'success' : j.status === 'failed' ? 'error' : 'loading',
+            stage: j.progress?.stage || j.status,
+            message: j.progress?.message || j.error_message || (j.status === 'running' ? 'Connecting to node...' : j.status)
+        })));
+
+        if (activeJobs.length === 0) {
+          clearInterval(pollInterval);
+          // Show refreshing state in UI before fully reloading
+          setSyncLogs([{ cinema: 'Synchronizing Database', status: 'loading', stage: 'scraped', message: 'Fetching fresh records...' }]);
+          setTimeout(() => {
+            window.location.reload(); 
+          }, 3000); 
+        }
+      } catch (e) {
+        console.error('Polling error:', e);
+      }
+    }, 3000);
+  };
+
   return {
     mounted,
     viewMode, setViewMode,
@@ -297,6 +386,8 @@ export function useDashboardData(
     selectedTags, setSelectedTags,
     isSyncing, setIsSyncing,
     syncLogs, setSyncLogs,
+    isSyncModalOpen, setIsSyncModalOpen,
+    selectedCinemasForSync, setSelectedCinemasForSync,
     highlightedReviewId, setHighlightedReviewId,
     leaderboardSort, setLeaderboardSort,
     visibleReviewsCount, setVisibleReviewsCount,
@@ -318,6 +409,7 @@ export function useDashboardData(
     filteredReviews,
     isLoadingMore,
     loadMoreReviews,
+    startCloudSync,
     hasMore: (totalReviewsAvailable[activeTab] || activeCinema?.currentTotalReviews || 0) > (activeCinema?.reviews?.length || 0)
   };
 }

@@ -1,4 +1,8 @@
 import { MongoClient } from 'mongodb';
+import dns from 'dns';
+
+// Proactively fix DNS resolution issues for MongoDB SRV records
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const uri = process.env.MONGODB_URI as string;
 const options = {};
@@ -9,6 +13,8 @@ let clientPromise: Promise<MongoClient>;
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your Mongo URI to .env');
 }
+
+console.log(`[DB] Attempting connection to MongoDB cluster...`);
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
