@@ -33,6 +33,6 @@ export default clientPromise;
 
 export async function getDb() {
   const client = await clientPromise;
-  // This will use the default database specified in the connection string (e.g. `cinema_reputation` or `reviews`)
-  return client.db();
+  // Explicitly connect to the 'reviews' database cluster
+  return client.db('reviews');
 }
