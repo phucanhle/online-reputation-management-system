@@ -3,6 +3,8 @@ import { getDb } from '@/lib/mongodb';
 import { Review } from '@/types/database';
 import { mapReview } from '@/lib/mappers';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const cinemaId = searchParams.get('cinemaId');

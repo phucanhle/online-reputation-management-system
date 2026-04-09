@@ -3,6 +3,8 @@ import DashboardClient from '@/components/DashboardClient';
 import { Cinema, Review } from '@/types/database';
 import { mapCinema, mapReview } from '@/lib/mappers';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Dashboard() {
   let cinemas: any[] = [];
   let globalMetrics = { totalReviews: 0, avgRating: 0 };
