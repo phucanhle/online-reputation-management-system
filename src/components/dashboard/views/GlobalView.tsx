@@ -14,6 +14,13 @@ export default function GlobalView({ state }: { state: DashboardState }) {
     setActiveTab, setViewMode, setHighlightedReviewId
   } = state;
   const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const chartStroke = mounted ? (resolvedTheme === 'dark' ? '#1e293b' : '#e2e8f0') : 'transparent';
 
   return (
     <div className="flex flex-col gap-10">
@@ -141,7 +148,6 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                  <div className="flex items-start gap-4 w-full pr-14 min-w-0">
                     <div className="flex-shrink-0 relative pt-1">
                        <img src={alert.authorThumbnail || `https://ui-avatars.com/api/?name=${alert.authorName || 'User'}&background=random`} className="w-12 h-12 rounded-2xl border border-card-border group-hover:border-rose-500/50 transition-colors shadow-md" alt="" referrerPolicy="no-referrer" loading="lazy" />
-                       {alert.localGuide && <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center border-2 border-slate-900 shadow-md"><Star className="w-2.5 h-2.5 fill-white text-white" /></div>}
                     </div>
                      <div className="flex-1 min-w-0 overflow-hidden flex flex-col pt-1">
                        <div className="flex items-center gap-2 group/title">
@@ -179,17 +185,6 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                     <div className="flex items-center justify-between">
                        <span className="text-[9px] font-bold text-secondary uppercase tracking-tighter flex-shrink-0">{alert.date}</span>
                        <div className="flex items-center gap-3 overflow-hidden">
-                          {alert.link && (
-                             <a 
-                                href={alert.link} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()} 
-                                className="p-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-lg transition-all flex-shrink-0"
-                             >
-                                <ExternalLink className="w-3 h-3" />
-                             </a>
-                          )}
                           <div className="flex items-center gap-1 text-rose-400 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0 overflow-hidden">
                              <span className="text-[9px] font-black uppercase tracking-widest truncate">Resolve</span>
                              <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" />

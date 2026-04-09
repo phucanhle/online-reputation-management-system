@@ -1,7 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { safeParseDate, getTags } from '../utils';
 
-export function useDashboardData(cinemas: any[]) {
+export function useDashboardData(
+  cinemas: any[], 
+  globalMetrics: { totalReviews: number, avgRating: number },
+  branchAggregates: any[]
+) {
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<'global' | 'branch'>('global');
   const [activeTab, setActiveTab] = useState<string>(cinemas[0]?.placeId || '');
@@ -19,6 +23,10 @@ export function useDashboardData(cinemas: any[]) {
   const [sidebarSort, setSidebarSort] = useState<'name' | 'rating-desc' | 'rating-asc'>('name');
   const [topicSort, setTopicSort] = useState<'rating-desc' | 'rating-asc'>('rating-desc');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [extraReviews, setExtraReviews] = useState<Record<string, any[]>>({});
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [reviewPages, setReviewPages] = useState<Record<string, number>>({});
+  const [totalReviewsAvailable, setTotalReviewsAvailable] = useState<Record<string, number>>({});
   
   // -- Debounced States for Search Optimization --
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
@@ -38,30 +46,63 @@ export function useDashboardData(cinemas: any[]) {
     setMounted(true);
   }, []);
 
+  // Create lookups for faster compute
+  const aggregateMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    branchAggregates.forEach(agg => {
+      map[agg.cinemaId] = {
+        count: agg._count._all,
+        rating: agg._avg.rating
+      };
+    });
+    return map;
+  }, [branchAggregates]);
+
   // --- Processed Cinemas with Latest Metrics ---
   const cinemasWithLatest = useMemo(() => {
     return cinemas.map(c => {
-      const sortedMetrics = [...(c.metrics || [])].sort((a: any, b: any) => b.date.localeCompare(a.date));
-      let latest = sortedMetrics[0];
+      const agg = aggregateMap[c.placeId];
+      
+      const currentTotalReviews = agg?.count || 0;
+      const currentAverageRating = agg?.rating || 0;
 
-      // If no valid dynamic metric yet, fallback to reviewing the static counts if possible
-      // (though we removed them, let's derive from current reviews as baseline)
-      const currentTotalReviews = (latest?.totalReviews && latest.totalReviews > 0)
-        ? latest.totalReviews
-        : (c.reviews?.length || 0);
-
-      const currentAverageRating = (latest?.averageRating && latest.averageRating > 0)
-        ? latest.averageRating
-        : (c.reviews?.length > 0 ? (c.reviews.reduce((acc: number, curr: any) => acc + curr.rating, 0) / c.reviews.length) : 0);
+      // Merge initial reviews with extra reviews loaded via API
+      const combinedReviews = [...(c.reviews || []), ...(extraReviews[c.placeId] || [])];
 
       return {
         ...c,
         currentTotalReviews,
         currentAverageRating,
-        reviews: (c.reviews || []).map((r: any) => ({ ...r, tags: getTags(r.text) }))
+        reviews: combinedReviews.map((r: any) => ({ ...r, tags: getTags(r.text) }))
       };
     });
-  }, [cinemas]);
+  }, [cinemas, aggregateMap, extraReviews]);
+
+  const loadMoreReviews = async (cinemaId: string) => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    
+    const currentPage = reviewPages[cinemaId] || 1;
+    const nextPage = currentPage + 1;
+    
+    try {
+      const res = await fetch(`/api/reviews?cinemaId=${cinemaId}&page=${nextPage}&limit=100`);
+      const data = await res.json();
+      
+      if (data.reviews) {
+        setExtraReviews(prev => ({
+          ...prev,
+          [cinemaId]: [...(prev[cinemaId] || []), ...data.reviews]
+        }));
+        setReviewPages(prev => ({ ...prev, [cinemaId]: nextPage }));
+        setTotalReviewsAvailable(prev => ({ ...prev, [cinemaId]: data.total }));
+      }
+    } catch (error) {
+      console.error('Failed to load more reviews:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const filteredCinemas = useMemo(() => {
     let result = cinemasWithLatest.filter(c =>
@@ -77,15 +118,11 @@ export function useDashboardData(cinemas: any[]) {
 
   // --- Compute Global Data ---
   const globalData = useMemo(() => {
-    let totalR = 0;
-    let totalGoogleReviews = 0;
-    let sumRating = 0;
     const branchRatings: { name: string, rating: number, count: number, placeId: string }[] = [];
     const recentNegative: any[] = [];
     const sentimentCounts = [0, 0, 0, 0, 0];
 
     cinemasWithLatest.forEach(c => {
-      totalGoogleReviews += c.currentTotalReviews;
       branchRatings.push({
         name: c.name,
         rating: c.currentAverageRating,
@@ -94,8 +131,6 @@ export function useDashboardData(cinemas: any[]) {
       });
 
       c.reviews.forEach((r: any) => {
-        totalR++;
-        sumRating += r.rating;
         if (r.rating <= 2) recentNegative.push({ 
           ...r, 
           cinemaName: c.name, 
@@ -116,14 +151,10 @@ export function useDashboardData(cinemas: any[]) {
       return safeParseDate(b.isoDate) - safeParseDate(a.isoDate);
     }).slice(0, 50);
 
-    const activeBranches = cinemasWithLatest.filter(c => c.currentAverageRating > 0);
-
     return {
-      avgRating: activeBranches.length > 0
-        ? (activeBranches.reduce((acc: number, curr: any) => acc + curr.currentAverageRating, 0) / activeBranches.length).toFixed(1)
-        : "0.0",
-      totalReviews: totalR,
-      totalGoogleReviews,
+      avgRating: globalMetrics.avgRating.toFixed(1),
+      totalReviews: 0, // This is count of LOADED reviews, which we might not need to show as a primary metric anymore
+      totalGoogleReviews: globalMetrics.totalReviews,
       leaderboard,
       criticalAlerts,
       sentimentDistribution: [
@@ -134,7 +165,7 @@ export function useDashboardData(cinemas: any[]) {
         { name: '5 ★', count: sentimentCounts[4], fill: '#10b981' }
       ]
     };
-  }, [cinemasWithLatest, leaderboardSort, criticalSort]);
+  }, [cinemasWithLatest, leaderboardSort, criticalSort, globalMetrics]);
 
   const activeCinema = useMemo(() => cinemasWithLatest.find(c => c.placeId === activeTab) || cinemasWithLatest[0], [cinemasWithLatest, activeTab]);
 
@@ -151,7 +182,7 @@ export function useDashboardData(cinemas: any[]) {
       }));
     }
 
-    // Fallback pseudo-history
+    // Fallback pseudo-history based on loaded reviews
     const sortedReviews = [...activeCinema.reviews].sort((a: any, b: any) =>
       safeParseDate(a.isoDate) - safeParseDate(b.isoDate)
     );
@@ -247,7 +278,10 @@ export function useDashboardData(cinemas: any[]) {
     momentumData,
     reviewVelocity,
     growthPercentage,
-    filteredReviews
+    filteredReviews,
+    isLoadingMore,
+    loadMoreReviews,
+    hasMore: (totalReviewsAvailable[activeTab] || activeCinema?.currentTotalReviews || 0) > (activeCinema?.reviews?.length || 0)
   };
 }
 

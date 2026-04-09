@@ -123,21 +123,15 @@ export async function runScraper(onProgress?: (p: SyncProgress) => void) {
                         await prisma.review.create({
                             data: {
                                 reviewId: r.review_id,
-                                cinemaId: cinema.id,
+                                cinemaId: cinema.placeId,
                                 rating: r.rating || 0,
                                 text: r.snippet || r.extracted_snippet?.original || "",
-                                translated: r.extracted_snippet?.translated || "",
                                 authorName: r.user?.name || "Unknown",
                                 authorThumbnail: r.user?.thumbnail || null,
                                 authorLink: r.user?.link || null,
-                                contributorId: r.user?.contributor_id || null,
-                                localGuide: r.user?.local_guide || false,
                                 likes: r.likes || 0,
-                                link: r.link || null,
-                                source: r.source || "Google",
                                 date: r.date || "",
-                                isoDate: r.iso_date ? new Date(r.iso_date) : null,
-                                position: r.position || null,
+                                isoDate: r.iso_date || null,
                             }
                         });
                         newCount++;

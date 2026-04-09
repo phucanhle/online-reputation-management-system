@@ -8,8 +8,16 @@ import DashboardHeader from './dashboard/layout/DashboardHeader';
 import GlobalView from './dashboard/views/GlobalView';
 import BranchView from './dashboard/views/BranchView';
 
-export default function DashboardClient({ cinemas }: { cinemas: any[] }) {
-  const state = useDashboardData(cinemas);
+export default function DashboardClient({ 
+  cinemas, 
+  globalMetrics, 
+  branchAggregates 
+}: { 
+  cinemas: any[], 
+  globalMetrics: { totalReviews: number, avgRating: number },
+  branchAggregates: any[]
+}) {
+  const state = useDashboardData(cinemas, globalMetrics, branchAggregates);
 
   if (!state.mounted) return null;
 

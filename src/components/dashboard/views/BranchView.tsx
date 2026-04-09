@@ -21,6 +21,14 @@ export default function BranchView({ state }: { state: DashboardState }) {
     topicSort, setTopicSort
   } = state;
   const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  const { resolvedTheme: theme } = useTheme();
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const chartStroke = mounted ? (resolvedTheme === 'dark' ? '#1e293b' : '#e2e8f0') : 'transparent';
 
   return (
     <div className="flex flex-col gap-10">
@@ -87,7 +95,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={resolvedTheme === 'dark' ? '#1e293b' : '#e2e8f0'} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartStroke} />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: '700' }} />
                     <YAxis hide domain={['auto', 'auto']} />
                     <Tooltip
@@ -172,9 +180,31 @@ export default function BranchView({ state }: { state: DashboardState }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredReviews.slice(0, visibleReviewsCount).map((r: any) => (
-                <ReviewCard key={r.id} review={r} highlightedReviewId={highlightedReviewId} />
+                <ReviewCard key={r.reviewId} review={r} highlightedReviewId={highlightedReviewId} />
               ))}
             </div>
+
+            {state.hasMore && (
+              <div className="mt-12 flex justify-center">
+                <button
+                  onClick={() => state.loadMoreReviews(activeCinema.placeId)}
+                  disabled={state.isLoadingMore}
+                  className="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-[2rem] font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-500/20 active:scale-95 flex items-center gap-3 group"
+                >
+                  {state.isLoadingMore ? (
+                    <>
+                      <div className="w-5 h-5 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                      Loading Insights...
+                    </>
+                  ) : (
+                    <>
+                      Load More Feedback
+                      <TrendingUp className="w-5 h-5 group-hover:translate-y-[-2px] transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

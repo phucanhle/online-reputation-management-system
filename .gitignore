@@ -48,6 +48,11 @@ prisma/dev.db-journal
 prisma/*.db
 prisma/*.db-journal
 
+# Root SQLite files
+/*.db
+/*.db-shm
+/*.db-wal
+
 # Raw data files
 *.xlsx
 *.csv

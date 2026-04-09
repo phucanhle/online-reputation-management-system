@@ -3,47 +3,164 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL_PRISMA_DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:../final-data.db"
 }
 
 model Cinema {
-  id      String               @id @default(uuid())
-  placeId String               @unique
-  name    String
-  metrics BranchDailyMetrics[]
-  reviews Review[]
+  placeId         String           @id @map("place_id")
+  name            String?          @map("place_name")
+  originalUrl     String?          @map("original_url")
+  resolvedUrl     String?          @map("resolved_url")
+  latitude        Float?
+  longitude       Float?
+  firstSeen       String?          @map("first_seen")
+  lastScraped     String?          @map("last_scraped")
+  totalReviews    Int?             @default(0) @map("total_reviews")
+  
+  reviews         Review[]
+  metrics         BranchDailyMetrics[]
+  aliases         PlaceAlias[]
+  history         ReviewHistory[]
+  sessions        ScrapeSession[]
+  checkpoints     SyncCheckpoint[]
+
+  @@map("places")
 }
 
 model BranchDailyMetrics {
   id            String   @id @default(uuid())
-  cinemaId      String
+  cinemaId      String   @map("place_id")
   date          String
-  totalReviews  Int
-  averageRating Float
-  createdAt     DateTime @default(now())
-  cinema        Cinema   @relation(fields: [cinemaId], references: [id])
+  totalReviews  Int      @map("total_reviews")
+  averageRating Float    @map("average_rating")
+  createdAt     DateTime @default(now()) @map("created_at")
+  cinema        Cinema   @relation(fields: [cinemaId], references: [placeId])
 
   @@unique([cinemaId, date])
+  @@map("branch_daily_metrics")
 }
 
 model Review {
-  id              String    @id @default(uuid())
-  reviewId        String    @unique
-  cinemaId        String
-  rating          Int
-  text            String?
-  translated      String?
-  authorName      String
-  authorThumbnail String?
-  authorLink      String?
-  contributorId   String?
-  localGuide      Boolean?
-  likes           Int?
-  link            String?
-  source          String?
-  date            String
-  isoDate         DateTime?
-  position        Int?
-  cinema          Cinema    @relation(fields: [cinemaId], references: [id])
+  reviewId           String          @unique @map("review_id")
+  cinemaId           String          @map("place_id")
+  authorName         String?         @map("author")
+  authorThumbnail    String?         @map("profile_picture")
+  authorLink         String?         @map("profile_url")
+  rating             Float?
+  text               String?         @map("review_text")
+  isoDate            String?         @map("review_date")
+  date               String?         @map("raw_date")
+  likes              Int?            @default(0)
+  userImages         String?         @map("user_images")
+  s3Images           String?         @map("s3_images")
+  s3ProfilePicture    String?         @map("s3_profile_picture")
+  ownerResponses     String?         @map("owner_responses")
+  createdDate        String          @map("created_date")
+  lastModified       String          @map("last_modified")
+  lastSeenSession    Int?            @map("last_seen_session")
+  lastChangedSession Int?            @map("last_changed_session")
+  isDeleted          Int?            @default(0) @map("is_deleted")
+  contentHash        String?         @map("content_hash")
+  engagementHash     String?         @map("engagement_hash")
+  rowVersion         Int             @default(1) @map("row_version")
+  
+  cinema             Cinema          @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
+  history            ReviewHistory[]
+  changedInSession   ScrapeSession?  @relation("LastChanged", fields: [lastChangedSession], references: [sessionId], onUpdate: NoAction)
+  seenInSession      ScrapeSession?  @relation("LastSeen", fields: [lastSeenSession], references: [sessionId], onUpdate: NoAction)
+
+  @@id([reviewId, cinemaId])
+  @@index([lastChangedSession], map: "idx_reviews_changed_session")
+  @@index([cinemaId, lastModified], map: "idx_reviews_modified")
+  @@index([cinemaId, isDeleted], map: "idx_reviews_deleted")
+  @@index([cinemaId, contentHash], map: "idx_reviews_hash")
+  @@index([cinemaId, isoDate], map: "idx_reviews_date")
+  @@index([cinemaId], map: "idx_reviews_place")
+  @@map("reviews")
+}
+
+model PlaceAlias {
+  aliasId     String  @id @map("alias_id")
+  canonicalId String  @map("canonical_id")
+  originalUrl String? @map("original_url")
+  createdAt   String  @map("created_at")
+  cinema      Cinema  @relation(fields: [canonicalId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([canonicalId], map: "idx_aliases_canonical")
+  @@map("place_aliases")
+}
+
+model ReviewHistory {
+  historyId          Int            @id @default(autoincrement()) @map("history_id")
+  reviewId           String         @map("review_id")
+  cinemaId           String         @map("place_id")
+  sessionId          Int?           @map("session_id")
+  actor               String         @default("scraper")
+  action              String
+  changedFields      String?        @map("changed_fields")
+  oldContentHash     String?        @map("old_content_hash")
+  newContentHash     String?        @map("new_content_hash")
+  oldEngagementHash   String?        @map("old_engagement_hash")
+  newEngagementHash   String?        @map("new_engagement_hash")
+  timestamp           String
+  session             ScrapeSession? @relation(fields: [sessionId], references: [sessionId], onUpdate: NoAction)
+  cinema              Cinema         @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
+  review              Review         @relation(fields: [reviewId], references: [reviewId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([action], map: "idx_history_action")
+  @@index([sessionId], map: "idx_history_session")
+  @@index([reviewId, cinemaId], map: "idx_history_review")
+  @@map("review_history")
+}
+
+model SchemaVersion {
+  id          Int     @id @default(autoincrement())
+  version     Int
+  appliedAt   String  @map("applied_at")
+  description String?
+
+  @@map("schema_version")
+}
+
+model ScrapeSession {
+  sessionId                                            Int                @id @default(autoincrement()) @map("session_id")
+  cinemaId                                              String             @map("place_id")
+  action                                                String             @default("scrape")
+  startedAt                                            String             @map("started_at")
+  completedAt                                          String?            @map("completed_at")
+  status                                                String             @default("running")
+  reviewsFound                                         Int?               @default(0) @map("reviews_found")
+  reviewsNew                                           Int?               @default(0) @map("reviews_new")
+  reviewsUpdated                                       Int?               @default(0) @map("reviews_updated")
+  sortBy                                               String?            @map("sort_by")
+  errorMessage                                         String?            @map("error_message")
+  
+  history                                               ReviewHistory[]
+  changedReviews                                        Review[]           @relation("LastChanged")
+  seenReviews                                           Review[]           @relation("LastSeen")
+  cinema                                                Cinema             @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
+  checkpoints                                           SyncCheckpoint[]
+
+  @@index([action], map: "idx_sessions_action")
+  @@index([cinemaId], map: "idx_sessions_place")
+  @@map("scrape_sessions")
+}
+
+model SyncCheckpoint {
+  cinemaId            String           @map("place_id")
+  target              String
+  lastSyncedAt        String?          @map("last_synced_at")
+  lastSyncedSession   Int?             @map("last_synced_session")
+  cursorReviewId      String?          @map("cursor_review_id")
+  cursorUpdatedAt     String?          @map("cursor_updated_at")
+  attemptCount        Int?             @default(0) @map("attempt_count")
+  status              String?          @default("ok")
+  errorMessage        String?          @map("error_message")
+  session             ScrapeSession?   @relation(fields: [lastSyncedSession], references: [sessionId], onUpdate: NoAction)
+  cinema              Cinema           @relation(fields: [cinemaId], references: [placeId], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([cinemaId, target])
+  @@index([target], map: "idx_sync_target")
+  @@map("sync_checkpoints")
 }
