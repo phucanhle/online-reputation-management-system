@@ -4,7 +4,7 @@
  * Helper functions to communicate with the FastAPI api_server.py
  */
 
-export const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:8000';
+export const API_SERVER_URL = process.env.API_SERVER_URL || 'https://google-review-craw-658219259966.europe-west1.run.app';
 
 export type SyncProgress = {
   cinema: string;
