@@ -13,18 +13,29 @@ export function mapCinema(doc: any): Cinema {
     firstSeen: doc.first_seen || doc.firstSeen,
     lastScraped: doc.last_scraped || doc.lastScraped,
     totalReviews: doc.total_reviews || doc.totalReviews,
+    avgRating: doc.avg_rating || doc.avgRating,
   };
 }
 
 export function mapReview(doc: any): Review {
-  let text = doc.review_text || doc.text || '';
-  if (typeof text === 'string' && text.trim().startsWith('{')) {
-    try {
-      const parsed = JSON.parse(text);
-      text = parsed.vi || parsed.en || Object.values(parsed)[0] || '';
-    } catch (e) {
-      // Ignored
+  // Python scraper stores text as {vi: "...", en: "..."} in `description`
+  // SQLite scraper stores text as JSON string in `review_text`
+  let text = '';
+  if (doc.description && typeof doc.description === 'object') {
+    text = doc.description.vi || doc.description.en || Object.values(doc.description)[0] as string || '';
+  } else if (typeof doc.review_text === 'string' && doc.review_text) {
+    if (doc.review_text.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(doc.review_text);
+        text = parsed.vi || parsed.en || Object.values(parsed)[0] as string || '';
+      } catch (e) {
+        text = doc.review_text;
+      }
+    } else {
+      text = doc.review_text;
     }
+  } else {
+    text = doc.text || '';
   }
 
   return {

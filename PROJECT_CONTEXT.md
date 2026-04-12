@@ -4,17 +4,17 @@
 The Cinema Reputation Monitor is a specialized web application designed to scrap, aggregate, and visualize reputation data for cinema branches from Google Maps. It uses SerpAPI to fetch real-time reviews and ratings, storing them in a local SQLite database for historical analysis and trend tracking.
 
 ## Technology Stack
-- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
-- **Database**: [SQLite](https://www.sqlite.org/) with [Prisma ORM](https://www.prisma.io/)
-- **Styling**: [TailwindCSS](https://tailwindcss.com/) with a premium dark-mode aesthetic
+- **Framework**: [Next.js 16+](https://nextjs.org/) (App Router)
+- **Database**: [MongoDB](https://www.mongodb.com/) (Standard for Metrics & Reviews) and [SQLite](https://www.sqlite.org/) (Legacy Reference)
+- **Styling**: [TailwindCSS 4](https://tailwindcss.com/) with a premium dark-mode aesthetic
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Charts**: [Recharts](https://recharts.org/)
-- **Data Fetching**: [SerpAPI](https://serpapi.com/) (Google Maps Reviews Engine)
+- **Data Fetching**: [SerpAPI](https://serpapi.com/) & [FastAPI Scraper Cluster]
 - **Exports**: [XLSX](https://github.com/SheetJS/sheetjs) for multi-sheet Excel reports
 
-## Core Data Models (`prisma/schema.prisma`)
-1. **Cinema**: Represents a physical location (PlaceID, Name).
-2. **BranchDailyMetrics**: Fact table storing daily snapshots of `totalReviews` and `averageRating`.
+## Core Data Models (MongoDB)
+1. **Cinema**: Represents a physical location (place_id, name).
+2. **BranchDailyMetrics**: Snapshot table storing pre-calculated daily metrics (sentiment score, density_30d, star distribution).
 3. **Review**: Individual feedback records with author details, text, rating, and sentiment tags.
 
 ## Key Components & Logic

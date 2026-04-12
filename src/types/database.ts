@@ -11,6 +11,7 @@ export interface Cinema {
   firstSeen?: string;
   lastScraped?: string;
   totalReviews?: number;
+  avgRating?: number;
 }
 
 export interface Review {
@@ -41,11 +42,22 @@ export interface Review {
 
 export interface BranchDailyMetrics {
   _id?: ObjectId;
-  cinemaId: string; // references Cinema.placeId
-  date: string;
-  totalReviews: number;
-  averageRating: number;
-  createdAt: Date;
+  place_id: string; // references Cinema.placeId
+  date: Date;
+  avg_rating: number;
+  total_reviews: number;
+  captured_reviews: number;
+  sentiment_score: number;
+  density_30d: number;
+  reviews_last_30d: number;
+  star_distribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  updated_at: Date;
 }
 
 export interface ScrapeSession {

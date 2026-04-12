@@ -29,42 +29,50 @@ export default async function Dashboard() {
         };
     }));
 
-    // 2. Fetch Global Aggregates
-    const globalAgg = await reviewsColl.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalReviews: { $sum: 1 },
-          avgRating: { $avg: '$rating' }
-        }
-      }
-    ]).toArray();
+    // 2. Compute Global Metrics from Official Stats (Network-wide reality)
+    const validCinemas = cinemasList.filter(c => (c as any).avg_rating > 0 && (c as any).total_reviews > 0);
+    const totalNetworkReviews = cinemasList.reduce((acc, c: any) => acc + (c.total_reviews || 0), 0);
+    const weightedSum = cinemasList.reduce((acc, c: any) => acc + ((c.avg_rating || 0) * (c.total_reviews || 0)), 0);
     
-    if (globalAgg.length > 0) {
-      globalMetrics = {
-        totalReviews: globalAgg[0].totalReviews || 0,
-        avgRating: globalAgg[0].avgRating || 0
-      };
-    }
+    const bg = cinemasList.find(c => ((c as any).place_name || '').includes('Bắc Giang'));
+    console.log(`[DEBUG] Network Total: ${totalNetworkReviews}, Weighted Avg: ${weightedSum / totalNetworkReviews}`);
+    console.log(`[DEBUG] Bắc Giang in DB: rating=${(bg as any)?.avg_rating}, total=${(bg as any)?.total_reviews}`);
 
-    // 3. Fetch Per-branch Aggregates
-    const branchAgg = await reviewsColl.aggregate([
-      {
-        $group: {
-          _id: '$place_id',
-          totalReviews: { $sum: 1 },
-          avgRating: { $avg: '$rating' }
+    globalMetrics = {
+      totalReviews: totalNetworkReviews,
+      avgRating: totalNetworkReviews > 0 ? weightedSum / totalNetworkReviews : 0
+    };
+    
+    // 3. Fetch Per-branch Aggregates from Daily Metrics (Latest snapshot for each)
+    const metricsColl = db.collection('branch_daily_metrics');
+    
+    const branchAgg = await Promise.all(cinemasList.map(async (c: any) => {
+        const pid = c.place_id || c.placeId;
+        const latestMetric = await metricsColl.find({ place_id: pid }).sort({ date: -1 }).limit(1).toArray();
+        
+        // Base structure from places (authoritative source for headline numbers)
+        const base = {
+          cinemaId: pid,
+          _count: { _all: c.total_reviews ?? 0 },
+          _avg: { rating: c.avg_rating ?? 0 },
+          sentiment_score: 0,
+          density_30d: 0,
+          star_distribution: null
+        };
+
+        if (latestMetric.length > 0) {
+            const m = latestMetric[0];
+            return {
+                ...base,
+                // Update with snapshot specific metrics if available
+                sentiment_score: m.sentiment_score ?? 0,
+                density_30d: m.density_30d ?? 0,
+                star_distribution: m.star_distribution ?? null
+            };
         }
-      },
-      {
-        $project: {
-          _id: 0,
-          cinemaId: '$_id',
-          _count: { _all: '$totalReviews' },
-          _avg: { rating: '$avgRating' }
-        }
-      }
-    ]).toArray();
+        
+        return base;
+    }));
     
     branchAggregates = branchAgg;
 

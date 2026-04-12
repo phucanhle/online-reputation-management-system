@@ -39,6 +39,6 @@ export default clientPromise;
 
 export async function getDb() {
   const client = await clientPromise;
-  // Explicitly connect to the 'reviews' database cluster
+  // Explicitly connect to the 'reviews_clean' database cluster
   return client.db('reviews');
 }

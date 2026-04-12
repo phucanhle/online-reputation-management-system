@@ -27,12 +27,14 @@ export function useDashboardData(
   const [sidebarSort, setSidebarSort] = useState<'name' | 'rating-desc' | 'rating-asc'>('name');
   const [topicSort, setTopicSort] = useState<'rating-desc' | 'rating-asc'>('rating-desc');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [momentumGranularity, setMomentumGranularity] = useState<'day' | 'week' | 'month'>('day');
-  const [momentumDateRange, setMomentumDateRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  const [isActivityDrawerOpen, setIsActivityDrawerOpen] = useState(false);
   const [extraReviews, setExtraReviews] = useState<Record<string, any[]>>({});
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [reviewPages, setReviewPages] = useState<Record<string, number>>({});
   const [totalReviewsAvailable, setTotalReviewsAvailable] = useState<Record<string, number>>({});
+  const [historicalMetrics, setHistoricalMetrics] = useState<any[]>([]);
+  const [isMetricsLoading, setIsMetricsLoading] = useState(false);
+  const [officialStatsMap, setOfficialStatsMap] = useState<Record<string, { avgRating: number, totalReviews: number, capturedReviews: number }>>({});
 
   // -- Debounced States for Search Optimization --
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
@@ -52,13 +54,40 @@ export function useDashboardData(
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!mounted) return;
+    const fetchOfficialStats = async () => {
+      try {
+        const res = await fetch('/api/places/official');
+        const data = await res.json();
+        if (data.data) {
+          const map: Record<string, { avgRating: number, totalReviews: number, capturedReviews: number }> = {};
+          data.data.forEach((p: any) => {
+            map[p.placeId] = { 
+              avgRating: p.avgRating, 
+              totalReviews: p.totalReviews,
+              capturedReviews: p.capturedReviews 
+            };
+          });
+          setOfficialStatsMap(map);
+        }
+      } catch (err) {
+        console.error('Failed to load official stats:', err);
+      }
+    };
+    fetchOfficialStats();
+  }, [mounted, isSyncing]);
+
   // Create lookups for faster compute
   const aggregateMap = useMemo(() => {
     const map: Record<string, any> = {};
     branchAggregates.forEach(agg => {
       map[agg.cinemaId] = {
         count: agg._count._all,
-        rating: agg._avg.rating
+        rating: agg._avg.rating,
+        sentiment: agg.sentiment_score,
+        density: agg.density_30d,
+        distribution: agg.star_distribution
       };
     });
     return map;
@@ -67,22 +96,30 @@ export function useDashboardData(
   // --- Processed Cinemas with Latest Metrics ---
   const cinemasWithLatest = useMemo(() => {
     return cinemas.map(c => {
-      const agg = aggregateMap[c.place_id];
+      // DB uses place_id (snake_case); after mapping, cinema has placeId (camelCase) — try both
+      const pid = c.place_id || c.placeId || '';
+      const agg = aggregateMap[pid];
 
-      const currentTotalReviews = agg?.count || 0;
-      const currentAverageRating = agg?.rating || 0;
+      const currentTotalReviews = officialStatsMap[pid]?.totalReviews ?? agg?.count ?? 0;
+      const currentAverageRating = officialStatsMap[pid]?.avgRating ?? agg?.rating ?? 0;
+      const capturedReviews = officialStatsMap[pid]?.capturedReviews ?? c.reviews?.length ?? 0;
 
       // Merge initial reviews with extra reviews loaded via API
-      const combinedReviews = [...(c.reviews || []), ...(extraReviews[c.placeId] || [])];
+      const combinedReviews = [...(c.reviews || []), ...(extraReviews[pid] || [])];
 
       return {
         ...c,
+        place_id: pid, // ensure place_id is always set
         currentTotalReviews,
         currentAverageRating,
+        capturedReviews,
+        sentimentScore: agg?.sentiment ?? 0,
+        feedbackDensity: agg?.density ?? 0,
+        starDistribution: agg?.distribution ?? null,
         reviews: combinedReviews.map((r: any) => ({ ...r, tags: getTags(r.text) }))
       };
     });
-  }, [cinemas, aggregateMap, extraReviews]);
+  }, [cinemas, aggregateMap, extraReviews, officialStatsMap]);
 
   const loadMoreReviews = async (cinemaId: string) => {
     if (isLoadingMore) return;
@@ -136,6 +173,7 @@ export function useDashboardData(
         placeId: c.place_id
       });
 
+      // Filter critical alerts (all-time since timeFilter removed)
       c.reviews.forEach((r: any) => {
         if (r.rating <= 2) recentNegative.push({
           ...r,
@@ -157,10 +195,17 @@ export function useDashboardData(
       return safeParseDate(b.isoDate) - safeParseDate(a.isoDate);
     }).slice(0, 50);
 
+    // Calculate dynamic global stats based on officialStatsMap (if available) or server fallback
+    const totalGoogleReviews = cinemasWithLatest.reduce((acc, c: any) => acc + (c.currentTotalReviews || 0), 0);
+    const totalCapturedReviews = cinemasWithLatest.reduce((acc, c: any) => acc + (c.capturedReviews || 0), 0);
+    const weightedSum = cinemasWithLatest.reduce((acc, c: any) => acc + ((c.currentAverageRating || 0) * (c.currentTotalReviews || 0)), 0);
+    const dynamicAvgRating = totalGoogleReviews > 0 ? (weightedSum / totalGoogleReviews) : globalMetrics.avgRating;
+
     return {
-      avgRating: globalMetrics.avgRating.toFixed(1),
-      totalReviews: 0, // This is count of LOADED reviews, which we might not need to show as a primary metric anymore
-      totalGoogleReviews: globalMetrics.totalReviews,
+      avgRating: dynamicAvgRating.toFixed(2),
+      totalReviews: totalCapturedReviews,
+      totalGoogleReviews,
+      totalCapturedReviews,
       leaderboard,
       criticalAlerts,
       sentimentDistribution: [
@@ -174,85 +219,6 @@ export function useDashboardData(
   }, [cinemasWithLatest, leaderboardSort, criticalSort, globalMetrics]);
 
   const activeCinema = useMemo(() => cinemasWithLatest.find(c => c.placeId === activeTab) || cinemasWithLatest[0], [cinemasWithLatest, activeTab]);
-
-  // --- Momentum Computation ---
-  const momentumData = useMemo(() => {
-    if (!activeCinema) return [];
-
-    let sortedReviews = [...(activeCinema.reviews || [])];
-    
-    // Sort all available reviews chronologically oldest to newest for historical accumulation
-    sortedReviews.sort((a: any, b: any) => safeParseDate(a.isoDate) - safeParseDate(b.isoDate));
-
-    const timelineData: { [key: string]: { dateVal: Date, count: number, ratingSum: number, reviewCount: number } } = {};
-    let runningTotal = (activeCinema.currentTotalReviews || 0) - sortedReviews.length;
-    if (runningTotal < 0) runningTotal = 0;
-
-    sortedReviews.forEach((r: any) => {
-      if (!r.isoDate) return;
-      let dateKey = '';
-      const dateObj = new Date(r.isoDate);
-      
-      if (momentumGranularity === 'day') {
-        dateKey = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-      } else if (momentumGranularity === 'week') {
-        const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-        const weekNo = Math.ceil(( ( (d.getTime() - yearStart.getTime()) / 86400000) + 1)/7);
-        dateKey = `W${weekNo} ${d.getUTCFullYear()}`;
-      } else {
-        dateKey = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-      }
-
-      runningTotal++;
-      
-      if (!timelineData[dateKey]) {
-        timelineData[dateKey] = { dateVal: dateObj, count: runningTotal, ratingSum: r.rating || 0, reviewCount: 1 };
-      } else {
-        timelineData[dateKey].count = runningTotal;
-        timelineData[dateKey].ratingSum += (r.rating || 0);
-        timelineData[dateKey].reviewCount += 1;
-      }
-    });
-
-    let results = Object.entries(timelineData).map(([date, data]) => ({ 
-      date,
-      dateVal: data.dateVal,
-      count: data.count,
-      rating: data.reviewCount > 0 ? data.ratingSum / data.reviewCount : 0 
-    }));
-
-    // Filter by chosen Date Range
-    if (momentumDateRange.start) {
-      const startD = new Date(momentumDateRange.start);
-      // set to start of day
-      startD.setHours(0, 0, 0, 0);
-      results = results.filter(r => r.dateVal >= startD);
-    }
-    if (momentumDateRange.end) {
-      const endD = new Date(momentumDateRange.end);
-      endD.setHours(23, 59, 59, 999);
-      results = results.filter(r => r.dateVal <= endD);
-    }
-
-    return results;
-  }, [activeCinema, momentumGranularity, momentumDateRange]);
-
-  const reviewVelocity = useMemo(() => {
-    if (momentumData.length < 2) return 0;
-    const start = momentumData[0].count;
-    const end = momentumData[momentumData.length - 1].count;
-    return end - start;
-  }, [momentumData]);
-
-  const growthPercentage = useMemo(() => {
-    if (momentumData.length < 2) return "0.0";
-    const start = momentumData[0].count;
-    const end = momentumData[momentumData.length - 1].count;
-    if (start === 0) return end > 0 ? "100.0" : "0.0";
-    return (((end - start) / start) * 100).toFixed(1);
-  }, [momentumData]);
 
   const filteredReviews = useMemo(() => {
     if (!activeCinema) return [];
@@ -272,7 +238,7 @@ export function useDashboardData(
       const dateB = safeParseDate(b.isoDate);
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
-  }, [activeCinema, selectedRatings, sortOrder, debouncedSearchQuery, selectedTags, highlightedReviewId]);
+  }, [activeCinema, selectedRatings, sortOrder, debouncedSearchQuery, selectedTags]);
 
   useEffect(() => {
     if (highlightedReviewId) {
@@ -290,90 +256,72 @@ export function useDashboardData(
     }
   }, [highlightedReviewId, filteredReviews]);
 
-  // --- Cloud Scrape Integration ---
-  const CLOUD_RUN_API = "https://google-review-craw-658219259966.europe-west1.run.app";
-  const CLOUD_RUN_API_KEY = process.env.NEXT_PUBLIC_CLOUD_RUN_API_KEY || "";
-
-  const startCloudSync = async (target: 'all' | 'selected') => {
+  // --- Sync Integration (Local Python Scraper via /api/scrape) ---
+  const startCloudSync = async (target: 'all' | 'selected', officialOnly: boolean = false) => {
     setIsSyncing(true);
     setIsSyncModalOpen(false);
-    setSyncLogs([]);
-
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-    };
-    if (CLOUD_RUN_API_KEY) {
-        headers['X-API-Key'] = CLOUD_RUN_API_KEY;
-    }
+    setSyncLogs([{ cinema: 'System', status: 'loading', message: officialOnly ? 'Đang thực hiện đồng bộ nhanh...' : 'Đang khởi động Python scraper...' }]);
 
     try {
-      if (target === 'all') {
-        setSyncLogs([{ cinema: 'Connecting to Cloud Cluster...', status: 'loading' }]);
-        await fetch(`${CLOUD_RUN_API}/trigger-all`, { headers });
-      } else {
-        setSyncLogs(selectedCinemasForSync.map(id => ({
-          cinema: cinemasWithLatest.find(c => c.placeId === id)?.name || id,
-          status: 'loading'
-        })));
+      const selectedData = target === 'selected' 
+        ? cinemasWithLatest.filter(c => selectedCinemasForSync.includes(c.placeId)).map(c => ({
+            id: c.placeId,
+            url: c.originalUrl,
+            name: c.name
+          }))
+        : [];
 
-        // Call scrape for each selected
-        for (const id of selectedCinemasForSync) {
-            const cinema = cinemasWithLatest.find(c => c.placeId === id);
-            if (!cinema) continue;
-            
-            await fetch(`${CLOUD_RUN_API}/scrape`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ 
-                    url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cinema.name)}&query_place_id=${cinema.placeId}`,
-                    scrape_mode: 'update'
-                })
+      const resp = await fetch('/api/scrape', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cinemas: selectedData, officialOnly })
+      });
+      if (!resp.body) throw new Error('No response body from /api/scrape');
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const update = JSON.parse(line);
+            setSyncLogs(prev => {
+              const existingIdx = prev.findIndex(l => l.cinema === update.cinema);
+              if (existingIdx > -1) {
+                const next = [...prev];
+                next[existingIdx] = update;
+                return next;
+              }
+              return [...prev, update];
             });
+          } catch (e) {
+            // ignore parse errors
+          }
         }
       }
 
-      // Start Polling
-      pollJobStatus();
+      // Refresh page data after sync completes
+      setTimeout(() => {
+        router.refresh();
+        setIsSyncing(false);
+      }, 2000);
+
     } catch (error) {
-      console.error('Failed to trigger cloud sync:', error);
+      console.error('Sync failed:', error);
+      setSyncLogs(prev => [...prev, { cinema: 'System', status: 'error', message: String(error) }]);
       setIsSyncing(false);
     }
   };
 
-  const pollJobStatus = async () => {
-    const headers: Record<string, string> = {};
-    if (CLOUD_RUN_API_KEY) {
-        headers['X-API-Key'] = CLOUD_RUN_API_KEY;
-    }
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`${CLOUD_RUN_API}/jobs`, { headers });
-        const jobs = await res.json();
-        
-        const activeJobs = jobs.filter((j: any) => j.status === 'running' || j.status === 'pending');
-        
-        // Map jobs to logs
-        setSyncLogs(jobs.map((j: any) => ({
-            cinema: j.url.includes('query=') ? decodeURIComponent(j.url.split('query=')[1].split('&')[0]) : j.job_id,
-            status: j.status === 'completed' ? 'success' : j.status === 'failed' ? 'error' : 'loading',
-            stage: j.progress?.stage || j.status,
-            message: j.progress?.message || j.error_message || (j.status === 'running' ? 'Connecting to node...' : j.status)
-        })));
-
-        if (activeJobs.length === 0) {
-          clearInterval(pollInterval);
-          // Show refreshing state in UI before fully reloading
-          setSyncLogs([{ cinema: 'Synchronizing Database', status: 'loading', stage: 'scraped', message: 'Fetching fresh records...' }]);
-          setTimeout(() => {
-            window.location.reload(); 
-          }, 3000); 
-        }
-      } catch (e) {
-        console.error('Polling error:', e);
-      }
-    }, 3000);
-  };
 
   return {
     mounted,
@@ -395,17 +343,13 @@ export function useDashboardData(
     sidebarSort, setSidebarSort,
     topicSort, setTopicSort,
     isMobileSidebarOpen, setIsMobileSidebarOpen,
-    momentumGranularity, setMomentumGranularity,
-    momentumDateRange, setMomentumDateRange,
+    isActivityDrawerOpen, setIsActivityDrawerOpen,
     debouncedSearchQuery,
     debouncedCinemaSearchQuery,
     cinemasWithLatest,
     filteredCinemas,
     globalData,
     activeCinema,
-    momentumData,
-    reviewVelocity,
-    growthPercentage,
     filteredReviews,
     isLoadingMore,
     loadMoreReviews,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ExternalLink, CalendarDays, MessageSquareQuote } from 'lucide-react';
+import { Star, CalendarDays } from 'lucide-react';
 import { getTags } from '../utils';
 
 function formatReviewDate(isoDate: string | null, rawDate: string | null) {
@@ -9,84 +9,132 @@ function formatReviewDate(isoDate: string | null, rawDate: string | null) {
 
   const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const diffTime = d2.getTime() - d1.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays === 0) return 'Hôm nay';
+  if (diffDays === 1) return 'Hôm qua';
+  if (diffDays < 7) return `${diffDays} ngày trước`;
   return rawDate || date.toLocaleDateString('vi-VN');
 }
 
-
-function formatReviewText(text: string | null) {
+function formatReviewText(text: string | null): string {
   if (!text) return '';
   try {
-    const textInEn = JSON.parse(text);
-    return textInEn.vi || textInEn.en || Object.values(textInEn)[0] || text;
-  } catch (e) {
+    const parsed = JSON.parse(text);
+    return parsed.vi || parsed.en || Object.values(parsed)[0] as string || text;
+  } catch {
     return text;
   }
 }
 
-export default function ReviewCard({ review: r, highlightedReviewId }: { review: any, highlightedReviewId: string | null }) {
+export default function ReviewCard({
+  review: r,
+  highlightedReviewId,
+}: {
+  review: any;
+  highlightedReviewId: string | null;
+}) {
+  const isHighlighted = highlightedReviewId === r.reviewId;
+  const rText = formatReviewText(r.text);
+  const rDate = formatReviewDate(r.isoDate, r.date);
+  const tags = getTags(r.text);
+  const rating = Number(r.rating) || 0;
+
+  // Derive border accent from rating
+  const ratingColor = rating >= 4
+    ? { badge: '#34c759', badgeBg: 'rgba(52,199,89,0.10)' }
+    : rating >= 3
+      ? { badge: '#f59e0b', badgeBg: 'rgba(245,158,11,0.10)' }
+      : { badge: '#ff453a', badgeBg: 'rgba(255,69,58,0.10)' };
+
   return (
     <div
       id={`review-${r.reviewId}`}
-      className={`group relative bg-white/[0.03] dark:bg-slate-900/40 hover:bg-white/[0.05] dark:hover:bg-slate-800/40 border border-card-border hover:border-rose-500/30 rounded-[2rem] p-7 transition-all duration-500 flex flex-col gap-6 shadow-2xl shadow-transparent hover:shadow-rose-500/10 ${highlightedReviewId === r.reviewId ? 'ring-4 ring-rose-500/50 animate-highlight-pulse border-rose-500/80 z-20 shadow-lg shadow-rose-500/20' : ''}`}
+      className={`
+        group relative flex flex-col gap-4 p-6
+        bg-[var(--surface-1)] border-none
+        rounded-[8px] transition-all duration-300
+        hover:shadow-product
+        ${isHighlighted ? 'highlight-pulse ring-2 ring-[#0071e3]/40 z-10' : ''}
+      `}
+      style={{ boxShadow: 'var(--shadow-product)' }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0 flex-1">
-          <div className="flex-shrink-0 relative">
-            <img src={r.authorThumbnail || `https://ui-avatars.com/api/?name=${r.authorName || 'User'}&background=random`} className="w-12 h-12 rounded-2xl border-2 border-card-border group-hover:border-indigo-500/50 transition-colors shadow-lg" alt="" referrerPolicy="no-referrer" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h5 className="text-sm font-black text-primary leading-tight flex items-center gap-2 truncate w-full">
-              {r.authorName}
-            </h5>
-            <div className="flex items-center gap-2 mt-1 overflow-hidden">
-              <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest truncate">{formatReviewDate(r.isoDate, r.date)}</span>
-            </div>
+      {/* Author row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <img
+            src={r.authorThumbnail || `https://ui-avatars.com/api/?name=${r.authorName || 'User'}&background=random`}
+            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
+          />
+          <div className="min-w-0">
+            <p
+              className="text-[14px] font-bold text-primary truncate leading-[1.29]"
+              style={{ letterSpacing: '-0.224px' }}
+            >
+              {r.authorName || 'Anonymous'}
+            </p>
+            <p
+              className="text-[12px] text-tertiary mt-0.5 leading-[1.33]"
+              style={{ letterSpacing: '-0.12px' }}
+            >
+              {rDate}
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 rounded-xl border border-amber-500/20 shadow-sm">
-            <div className="flex items-center">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`w-3 h-3 ${i < r.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-700'}`} />
-              ))}
-            </div>
-            <span className="text-xs font-black text-amber-500 ml-1">{r.rating?.toFixed(1) || "0.0"}</span>
-          </div>
+        {/* Rating pill */}
+        <div
+          className="flex items-center gap-1.5 px-3 py-1 rounded-[980px] flex-shrink-0"
+          style={{ background: ratingColor.badgeBg }}
+        >
+          <Star
+            className="w-3.5 h-3.5 fill-current"
+            style={{ color: ratingColor.badge }}
+          />
+          <span
+            className="text-[13px] font-bold tabular-nums"
+            style={{ color: ratingColor.badge, letterSpacing: '-0.12px' }}
+          >
+            {rating.toFixed(0)}
+          </span>
         </div>
       </div>
 
-      <div className="relative group-hover:px-2 transition-all duration-500">
-        <MessageSquareQuote className="absolute -left-2 -top-4 w-8 h-8 text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors" />
-        <p className="text-[14px] leading-[1.8] text-secondary font-medium italic relative z-10 antialiased">
-          {formatReviewText(r.text) ? `"${formatReviewText(r.text)}"` : <span className="opacity-40 tracking-widest uppercase text-[10px] font-black not-italic">No descriptive text provided</span>}
-        </p>
-      </div>
+      {/* Review text */}
+      <p
+        className="text-[16px] text-primary leading-[1.47]"
+        style={{ letterSpacing: '-0.374px' }}
+      >
+        {rText
+          ? `"${rText}"`
+          : <span className="opacity-30 italic text-[14px]">Không có nội dung đánh giá</span>
+        }
+      </p>
 
-      <div className="mt-auto pt-6 border-t border-card-border/50 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-wrap gap-2">
-            {getTags(r.text).map(tag => (
-              <span key={tag} className="px-2.5 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-tighter border border-indigo-500/10">
-                {tag}
-              </span>
-            ))}
-          </div>
-          {r.isoDate && (
-            <div className="flex items-center gap-1.5 text-secondary">
-              <CalendarDays className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase tracking-tight">
-                {new Date(r.isoDate).toLocaleDateString('vi-VN')}
-              </span>
-            </div>
-          )}
+      {/* Footer: tags + date */}
+      <div className="flex items-center justify-between gap-3 mt-auto">
+        <div className="flex flex-wrap gap-1.5 overflow-hidden">
+          {tags.slice(0, 4).map(tag => (
+            <span
+              key={tag}
+              className="px-2 py-0.5 bg-[var(--surface-2)] rounded-[4px] text-[10px] font-bold text-tertiary whitespace-nowrap uppercase tracking-wider"
+              style={{ letterSpacing: '0.05em' }}
+            >
+              {tag}
+            </span>
+          ))}
         </div>
+        {r.isoDate && (
+          <div className="flex items-center gap-1.5 text-tertiary flex-shrink-0 opacity-60">
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-medium" style={{ letterSpacing: '-0.12px' }}>
+              {new Date(r.isoDate).toLocaleDateString('vi-VN')}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
