@@ -42,7 +42,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
   ];
 
   return (
-    <div className="flex flex-col gap-10 animate-fade-in max-w-[1200px] mx-auto w-full">
+    <div className="flex flex-col gap-10 animate-fade-in max-w-[1200px] p-4 mx-auto w-full">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Main column */}
@@ -81,29 +81,29 @@ export default function BranchView({ state }: { state: DashboardState }) {
               </p>
               {activeCinema.lastScraped && (
                 <div className="flex items-center gap-1.5 mt-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span className="sf-text-caption text-[12px] font-medium text-tertiary truncate">
-                        Last updated: {new Date(activeCinema.lastScraped).toLocaleString('vi-VN')}
-                    </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="sf-text-caption text-[12px] font-medium text-tertiary truncate">
+                    Last updated: {new Date(activeCinema.lastScraped).toLocaleString('vi-VN')}
+                  </span>
                 </div>
               )}
             </div>
             <div className="flex items-center gap-3">
-                <button
-                    onClick={() => state.setIsActivityDrawerOpen(true)}
-                    className="p-2.5 text-secondary hover:text-primary hover:bg-[var(--surface-2)] rounded-[8px] transition-all"
-                    title="View Activity Logs"
-                >
-                    <Activity className={`w-4 h-4 ${state.isSyncing ? 'animate-pulse text-[var(--apple-blue)]' : ''}`} />
-                </button>
-                <button
-                    onClick={() => state.startCloudSync('selected', true)}
-                    disabled={state.isSyncing}
-                    className="apple-btn-primary apple-pill flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 text-[15px] font-medium disabled:opacity-50"
-                >
-                    <RefreshCcw className={`w-4 h-4 ${state.isSyncing ? 'animate-spin' : ''}`} />
-                    Sync Now
-                </button>
+              <button
+                onClick={() => state.setIsActivityDrawerOpen(true)}
+                className="p-2.5 text-secondary hover:text-primary hover:bg-[var(--surface-2)] rounded-[8px] transition-all"
+                title="View Activity Logs"
+              >
+                <Activity className={`w-4 h-4 ${state.isSyncing ? 'animate-pulse text-[var(--apple-blue)]' : ''}`} />
+              </button>
+              <button
+                onClick={() => state.startCloudSync('selected', true)}
+                disabled={state.isSyncing}
+                className="apple-btn-primary apple-pill flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 text-[15px] font-medium disabled:opacity-50"
+              >
+                <RefreshCcw className={`w-4 h-4 ${state.isSyncing ? 'animate-spin' : ''}`} />
+                Sync Now
+              </button>
             </div>
           </div>
 
