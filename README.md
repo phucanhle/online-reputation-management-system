@@ -2,6 +2,8 @@
 
 **ORMS** is a high-performance, real-time analytics dashboard designed for multi-location cinema operations. It automates the collection of Google Maps reviews and transforms raw feedback into actionable business intelligence through dynamic MongoDB aggregation pipelines and an Apple-inspired, minimalist aesthetic.
 
+![Global Dashboard Overview](./public/assets/documentation/dashboard_global.png)
+
 ## 🚀 Key Features
 
 - **Real-Time Data Node Sync**: Automated batch-scraping of Google Maps reviews using an external FastAPI crawler backend with a protective UI overlay to ensure data integrity during long-running tasks.
@@ -9,6 +11,12 @@
 - **Intelligent Insight Feed**: Topic-based filtering (Service, Cleanliness, Food, Experience) combined with binary sentiment sorting for rapid response to critical feedback.
 - **Professional Reporting**: Multi-sheet Excel export system generating comprehensive "Audit Reports" with branch-specific sheets and star-rating sorting.
 - **Apple-Inspired Minimalism**: A premium, content-first user interface utilizing a strict binary color rhythm (Light/Dark mode), native Apple typography (`SF Pro`), flat elevations, and `Apple Blue` interactive accents, replacing legacy glassmorphism.
+
+## 📸 Branch Analytics
+
+Detailed branch-level insights showing localized topic analysis and historical momentum:
+
+![Branch Detail View](./public/assets/documentation/dashboard_branch.png)
 
 ## 🛠️ Technical Stack
 
