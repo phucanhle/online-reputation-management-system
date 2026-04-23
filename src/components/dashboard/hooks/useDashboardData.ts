@@ -63,10 +63,10 @@ export function useDashboardData(
         if (data.data) {
           const map: Record<string, { avgRating: number, totalReviews: number, capturedReviews: number }> = {};
           data.data.forEach((p: any) => {
-            map[p.placeId] = { 
-              avgRating: p.avgRating, 
+            map[p.placeId] = {
+              avgRating: p.avgRating,
               totalReviews: p.totalReviews,
-              capturedReviews: p.capturedReviews 
+              capturedReviews: p.capturedReviews
             };
           });
           setOfficialStatsMap(map);
@@ -104,8 +104,9 @@ export function useDashboardData(
       const currentAverageRating = officialStatsMap[pid]?.avgRating ?? agg?.rating ?? 0;
       const capturedReviews = officialStatsMap[pid]?.capturedReviews ?? c.reviews?.length ?? 0;
 
-      // Merge initial reviews with extra reviews loaded via API
-      const combinedReviews = [...(c.reviews || []), ...(extraReviews[pid] || [])];
+      // Merge initial reviews with extra reviews loaded via API and filter out deleted reviews
+      const rawCombined = [...(c.reviews || []), ...(extraReviews[pid] || [])];
+      const combinedReviews = rawCombined.filter((r: any) => r.is_deleted !== 1 && r.isDeleted !== 1 && r.isDelete !== 1);
 
       return {
         ...c,
@@ -263,15 +264,15 @@ export function useDashboardData(
     setSyncLogs([{ cinema: 'System', status: 'loading', message: officialOnly ? 'Đang thực hiện đồng bộ nhanh...' : 'Đang khởi động Python scraper...' }]);
 
     try {
-      const selectedData = target === 'selected' 
+      const selectedData = target === 'selected'
         ? cinemasWithLatest.filter(c => selectedCinemasForSync.includes(c.placeId)).map(c => ({
-            id: c.placeId,
-            url: c.originalUrl,
-            name: c.name
-          }))
+          id: c.placeId,
+          url: c.originalUrl,
+          name: c.name
+        }))
         : [];
 
-      const resp = await fetch('/api/scrape', { 
+      const resp = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cinemas: selectedData, officialOnly })

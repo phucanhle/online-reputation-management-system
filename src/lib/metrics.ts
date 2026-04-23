@@ -22,23 +22,36 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 export async function runMetricsAggregation(onProgress?: (p: SyncProgress) => void) {
   const db = await getDb();
 
-  const placesColl = db.collection<any>('places');
   const reviewsColl = db.collection<any>('reviews');
   const metricsColl = db.collection<any>('branch_daily_metrics');
 
-  const branches = await placesColl.find({}, {
-    projection: { place_id: 1, place_name: 1, avg_rating: 1, total_reviews: 1 }
-  }).toArray();
+  const branches = await reviewsColl.aggregate([
+    {
+      $group: {
+        _id: '$place_id',
+        place_name: { $first: '$company' },
+        avg_rating: { $avg: '$rating' },
+        total_reviews: { $sum: 1 }
+      }
+    }
+  ]).toArray();
 
   if (branches.length === 0) {
     return; // Nothing to do
   }
 
+  const formattedBranches = branches.map(b => ({
+    place_id: b._id,
+    place_name: b.place_name,
+    avg_rating: b.avg_rating,
+    total_reviews: b.total_reviews
+  }));
+
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const thirtyDaysAgo = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const batches = chunkArray(branches, 5);
+  const batches = chunkArray(formattedBranches, 5);
 
   for (const batch of batches) {
     await Promise.all(batch.map(async (branch) => {

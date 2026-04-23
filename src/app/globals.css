@@ -1,70 +1,44 @@
 @import "tailwindcss";
 
-/* ============================================================
-   ORMS Design System — Apple-inspired (DESIGN.md)
-   ============================================================ */
-
 @theme {
-  /* Apple color tokens */
-  --color-apple-blue: #0071e3;
-  --color-apple-blue-dark: #2997ff;
-  --color-apple-link: #0066cc;
-  --color-apple-black: #000000;
-  --color-apple-near-black: #1d1d1f;
-  --color-apple-light: #f5f5f7;
-  --color-apple-white: #ffffff;
-
-  /* Surface tokens — used as CSS var references */
   --color-background: var(--bg-main);
   --color-surface: var(--surface-1);
-  --color-card: var(--surface-2);
+  --color-card: var(--surface-1);
   --color-primary: var(--text-primary);
   --color-secondary: var(--text-secondary);
   --color-tertiary: var(--text-tertiary);
-  --color-accent: #0071e3;
-  --color-card-border: var(--border-color);
-
-  /* Animations */
-  --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
-  --animate-fade-in: fade-in 0.4s ease-out forwards;
-
-  @keyframes pulse-slow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes highlight-pulse {
-    0%, 100% { border-color: rgba(0, 113, 227, 0.3); box-shadow: 0 0 20px rgba(0, 113, 227, 0.1); }
-    50% { border-color: rgba(0, 113, 227, 0.8); box-shadow: 0 0 50px rgba(0, 113, 227, 0.3); }
-  }
+  --color-accent: var(--apple-blue);
+  --color-card-border: transparent;
+  
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* ============================================================
-   CSS Variables — Light & Dark
+   CSS Variables — Apple Binary Light & Dark
    ============================================================ */
 :root {
   /* Backgrounds */
   --bg-main: #f5f5f7;
   --surface-1: #ffffff;
-  --surface-2: #f5f5f7;
-  --surface-3: #e8e8ed;
+  --surface-2: #fafafc;
 
   /* Text */
   --text-primary: #1d1d1f;
   --text-secondary: rgba(0, 0, 0, 0.8);
   --text-tertiary: rgba(0, 0, 0, 0.48);
 
-  /* Borders */
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(0, 0, 0, 0.16);
+  /* Interactive */
+  --apple-blue: #0071e3;
+  --link-color: #0066cc;
+  --focus-color: #0071e3;
 
   /* Shadows */
-  --shadow-card: rgba(0, 0, 0, 0.10) 0px 4px 24px 0px;
+  --shadow-card: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
   --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
-  --shadow-nav: rgba(0, 0, 0, 0.15) 0px 1px 0px 0px;
+  
+  /* Borders */
+  --border-color: rgba(0, 0, 0, 0.08);
 }
 
 .dark {
@@ -72,21 +46,23 @@
   --bg-main: #000000;
   --surface-1: #1d1d1f;
   --surface-2: #272729;
-  --surface-3: #2a2a2d;
 
   /* Text */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.80);
+  --text-secondary: rgba(255, 255, 255, 0.8);
   --text-tertiary: rgba(255, 255, 255, 0.48);
 
-  /* Borders */
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.16);
+  /* Interactive */
+  --apple-blue: #0071e3;
+  --link-color: #2997ff;
+  --focus-color: #0071e3;
 
   /* Shadows */
-  --shadow-card: rgba(0, 0, 0, 0.40) 0px 4px 24px 0px;
-  --shadow-product: rgba(0, 0, 0, 0.50) 3px 5px 30px 0px;
-  --shadow-nav: rgba(255, 255, 255, 0.06) 0px 1px 0px 0px;
+  --shadow-card: rgba(0, 0, 0, 0.4) 3px 5px 30px 0px;
+  --shadow-product: rgba(0, 0, 0, 0.4) 3px 5px 30px 0px;
+  
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ============================================================
@@ -103,107 +79,153 @@
   }
 
   body {
-    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-optical-sizing: auto;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg-main);
     color: var(--text-primary);
-    line-height: 1.47;
-    letter-spacing: -0.374px;
-    font-size: 17px;
-    font-weight: 400;
     transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: -apple-system, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-weight: 600;
-    line-height: 1.10;
-    letter-spacing: -0.28px;
-  }
-
-  a {
-    color: var(--apple-link, #0066cc);
-    text-decoration: none;
-  }
-  a:hover {
-    text-decoration: underline;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   ::selection {
-    background: rgba(0, 113, 227, 0.25);
+    background: rgba(0, 113, 227, 0.3); /* Apple blue selection */
     color: inherit;
   }
 }
 
 /* ============================================================
-   Apple Glass Nav Utility
+   Apple UI Utilities
    ============================================================ */
 .apple-nav {
-  background: rgba(0, 0, 0, 0.80);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  /* No border bottom or shadow in pure Apple design */
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: none;
 }
 
 .dark .apple-nav {
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.8);
 }
 
-/* Light-mode sidebar glass */
 .sidebar-glass {
-  background: rgba(255, 255, 255, 0.80);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: var(--surface-1);
   border-right: 1px solid var(--border-color);
 }
 
 .dark .sidebar-glass {
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-1);
 }
 
 /* Card utilities */
 .apple-card {
   background: var(--surface-1);
-  border-radius: 8px; /* Standard Apple Radius */
-  box-shadow: var(--shadow-product);
-  transition: all 0.3s ease;
-  border: none; /* Borders are rare in Apple design */
+  border-radius: 8px;
+  box-shadow: none;
+  border: none;
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.apple-card-elevated {
+  box-shadow: var(--shadow-card);
+}
+
+.apple-card:hover {
+  /* Minimal interaction as per Apple guidelines */
+}
+
+/* Typography Classes */
+.sf-display-hero {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 600;
+  line-height: 1.07;
+  letter-spacing: -0.28px;
+}
+
+.sf-display-section {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.10;
+  letter-spacing: normal;
+}
+
+.sf-display-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.14;
+  letter-spacing: 0.196px;
+}
+
+.sf-text-body {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.47;
+  letter-spacing: -0.374px;
+}
+
+.sf-text-caption {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.29;
+  letter-spacing: -0.224px;
 }
 
 .apple-pill {
     border-radius: 980px;
 }
 
-.dark .apple-card {
-  background: var(--surface-1);
+.apple-btn-primary {
+  background-color: var(--apple-blue);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 8px 15px;
+  font-size: 17px;
+  font-weight: 400;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.apple-btn-primary:active {
+  background-color: #005bb5;
+}
+
+.apple-link {
+  color: var(--link-color);
+  font-family: var(--font-sans);
+  text-decoration: none;
+}
+
+.apple-link:hover {
+  text-decoration: underline;
 }
 
 /* ============================================================
    Custom Scrollbar
    ============================================================ */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: var(--text-tertiary);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background: var(--text-secondary);
 }
 
 /* ============================================================
-   Highlight Animation (for review cards)
+   Focus Rings
    ============================================================ */
-.highlight-pulse {
-  animation: highlight-pulse 2s ease-in-out infinite;
-  border-color: rgba(0, 113, 227, 0.5) !important;
+*:focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
 }

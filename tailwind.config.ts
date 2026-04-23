@@ -10,48 +10,18 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        // SF Pro Display — for 20px+ headings
-        display: [
-          '-apple-system',
-          '"SF Pro Display"',
-          '"Helvetica Neue"',
-          'Helvetica',
-          'Arial',
-          'sans-serif',
-        ],
-        // SF Pro Text — for body / below 20px
-        body: [
-          '-apple-system',
-          '"SF Pro Text"',
-          '"Helvetica Neue"',
-          'Helvetica',
-          'Arial',
-          'sans-serif',
-        ],
-        sans: [
-          '-apple-system',
-          '"SF Pro Text"',
-          '"SF Pro Display"',
-          '"Helvetica Neue"',
-          'Helvetica',
-          'Arial',
-          'sans-serif',
-        ],
+        sans: ['var(--font-outfit)', 'sans-serif'],
+        display: ['var(--font-outfit)', 'sans-serif'],
+        body: ['var(--font-outfit)', 'sans-serif'],
       },
       colors: {
-        // Apple Design Tokens
-        'apple-blue':      '#0071e3',
-        'apple-blue-dark': '#2997ff',
-        'apple-link':      '#0066cc',
-        'apple-black':     '#000000',
-        'apple-near-black':'#1d1d1f',
-        'apple-light':     '#f5f5f7',
-        'apple-white':     '#ffffff',
-
-        // Dark surface scale
-        'dark-s1': '#1c1c1e',
-        'dark-s2': '#28282a',
-        'dark-s3': '#3a3a3c',
+        // Vibrant Palette
+        'vibrant-blue': '#0071e3',
+        'vibrant-purple': '#af52de',
+        'vibrant-cyan': '#32ade6',
+        'vibrant-green': '#34c759',
+        'vibrant-red': '#ff3b30',
+        'vibrant-orange': '#ff9500',
 
         // Semantic (CSS var-backed)
         background: 'var(--bg-main)',
@@ -64,53 +34,66 @@ const config: Config = {
         'card-border': 'var(--border-color)',
       },
       borderRadius: {
-        // Apple radius scale
-        'apple-sm':   '5px',
-        'apple':      '8px',
-        'apple-md':  '11px',
-        'apple-lg':  '12px',
-        'apple-pill':'980px',
-        'apple-full':'50%',
+        'apple-sm':   '6px',
+        'apple':      '12px',
+        'apple-md':   '16px',
+        'apple-lg':   '24px',
+        'apple-pill': '980px',
+        'apple-full': '50%',
       },
       boxShadow: {
         'apple-card':    'var(--shadow-card)',
-        'apple-product': 'rgba(0,0,0,0.22) 3px 5px 30px 0px',
+        'apple-product': 'var(--shadow-product)',
         'apple-nav':     'rgba(0,0,0,0.15) 0px 1px 0px 0px',
+        'neon-blue':     '0 0 15px rgba(0, 113, 227, 0.4)',
+        'neon-purple':   '0 0 15px rgba(175, 82, 222, 0.4)',
       },
       letterSpacing: {
-        'apple-hero':  '-0.28px',
-        'apple-body':  '-0.374px',
-        'apple-sm':    '-0.224px',
-        'apple-micro': '-0.12px',
+        'apple-hero':  '-0.02em',
+        'apple-body':  '-0.01em',
+        'apple-sm':    '0em',
+        'apple-micro': '0.05em',
       },
       lineHeight: {
-        'apple-hero':   '1.07',
-        'apple-section':'1.10',
-        'apple-tile':   '1.14',
-        'apple-card':   '1.19',
-        'apple-body':   '1.47',
-        'apple-caption':'1.29',
-        'apple-micro':  '1.33',
-        'apple-button': '2.41',
+        'apple-hero':   '1.1',
+        'apple-section':'1.2',
+        'apple-tile':   '1.3',
+        'apple-card':   '1.4',
+        'apple-body':   '1.5',
+        'apple-caption':'1.4',
+        'apple-micro':  '1.3',
+        'apple-button': '1',
       },
       transitionTimingFunction: {
         'apple': 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+        'bounce-slight': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       backdropBlur: {
         'apple': '20px',
+        'glass': '40px',
       },
       animation: {
         'pulse-slow': 'pulse-slow 3s ease-in-out infinite',
-        'fade-in':    'fade-in 0.4s ease-out forwards',
+        'fade-in':    'fade-in 0.5s ease-out forwards',
+        'slide-up':   'slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'float':      'float 3s ease-in-out infinite',
       },
       keyframes: {
         'pulse-slow': {
           '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.5' },
+          '50%':      { opacity: '0.6' },
         },
         'fade-in': {
-          from: { opacity: '0', transform: 'translateY(8px)' },
+          from: { opacity: '0', filter: 'blur(4px)' },
+          to:   { opacity: '1', filter: 'blur(0)' },
+        },
+        'slide-up': {
+          from: { opacity: '0', transform: 'translateY(16px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%':      { transform: 'translateY(-4px)' },
         },
       },
     },

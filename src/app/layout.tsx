@@ -20,12 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      {/*
-        Font: We rely on the system SF Pro font stack defined in globals.css and tailwind.config.ts.
-        No external font imports needed — Apple devices serve SF Pro natively,
-        other systems fall back to Helvetica Neue / Arial.
-      */}
-      <body>
+      <body className="font-sans antialiased text-primary bg-background">
         <Providers>
           {children}
         </Providers>

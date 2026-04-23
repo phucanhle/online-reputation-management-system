@@ -9,45 +9,63 @@ export async function GET(req: Request) {
 
   try {
     const db = await getDb();
-    const placesColl = db.collection<any>('places');
     const reviewsColl = db.collection<any>('reviews');
     
     if (placeId) {
       // Fetch specific place
-      const place = await placesColl.findOne({ place_id: placeId });
+      const places = await reviewsColl.aggregate([
+        { $match: { place_id: placeId } },
+        { 
+          $group: { 
+            _id: '$place_id', 
+            place_name: { $first: '$company' }, 
+            avg_rating: { $avg: '$rating' }, 
+            total_reviews: { $sum: 1 },
+            last_scraped: { $max: '$created_date' }
+          } 
+        }
+      ]).toArray();
 
-      if (!place) {
+      if (places.length === 0) {
         return NextResponse.json({ error: 'Place not found in database' }, { status: 404 });
       }
 
-      // Đếm số lượng review thực tế đã cào được trong DB cho rạp này
-      const capturedCount = await reviewsColl.countDocuments({ place_id: placeId });
+      const place = places[0];
 
       return NextResponse.json({
-        placeId: place.place_id,
-        name: place.place_name || place.name,
+        placeId: place._id,
+        name: place.place_name,
         avgRating: place.avg_rating ?? 0,
         totalReviews: place.total_reviews ?? 0,
-        capturedReviews: capturedCount,
+        capturedReviews: place.total_reviews,
         source: 'database',
-        lastScraped: place.last_scraped || place.updated_at
+        lastScraped: place.last_scraped
       });
     } else {
       // Fetch all places
-      const places = await placesColl.find({}).toArray();
+      const places = await reviewsColl.aggregate([
+        { 
+          $group: { 
+            _id: '$place_id', 
+            place_name: { $first: '$company' }, 
+            avg_rating: { $avg: '$rating' }, 
+            total_reviews: { $sum: 1 },
+            last_scraped: { $max: '$created_date' }
+          } 
+        }
+      ]).toArray();
       
-      const results = await Promise.all(places.map(async (place) => {
-        const capturedCount = await reviewsColl.countDocuments({ place_id: place.place_id });
+      const results = places.map((place) => {
         return {
-          placeId: place.place_id,
-          name: place.place_name || place.name,
+          placeId: place._id,
+          name: place.place_name,
           avgRating: place.avg_rating ?? 0,
           totalReviews: place.total_reviews ?? 0,
-          capturedReviews: capturedCount,
+          capturedReviews: place.total_reviews,
           source: 'database',
-          lastScraped: place.last_scraped || place.updated_at
+          lastScraped: place.last_scraped
         };
-      }));
+      });
 
       return NextResponse.json({ data: results });
     }
