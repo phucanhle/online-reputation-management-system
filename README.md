@@ -1,23 +1,14 @@
-# ORMS CORE: Cinema Reputation Monitor 🍿
+# ORMS: Online Reputation Management System 🍿
 
-**ORMS CORE** (Online Reputation Management System) is a high-performance, real-time analytics dashboard designed for multi-location cinema operations. It automates the collection of Google Maps reviews and transforms raw feedback into actionable business intelligence through advanced sentiment mapping and fact-table architecture.
-
-![Global Dashboard Overview](./public/assets/documentation/dashboard_global.png)
+**ORMS** is a high-performance, real-time analytics dashboard designed for multi-location cinema operations. It automates the collection of Google Maps reviews and transforms raw feedback into actionable business intelligence through dynamic MongoDB aggregation pipelines and an Apple-inspired, minimalist aesthetic.
 
 ## 🚀 Key Features
 
-- **Real-Time Data Node Sync**: Automated batch-scraping of Google Maps reviews using SerpAPI with a protective UI overlay to ensure data integrity during long-running tasks.
-- **Fact-Table Analytics**: High-precision reputation metrics (Sentiment, Feedback Density, and Growth Momentum) powered by a Prisma-backed daily snapshot engine.
+- **Real-Time Data Node Sync**: Automated batch-scraping of Google Maps reviews using an external FastAPI crawler backend with a protective UI overlay to ensure data integrity during long-running tasks.
+- **Dynamic Aggregation Analytics**: High-precision reputation metrics (Sentiment, Feedback Density, and Growth Momentum) computed natively on-the-fly using MongoDB Aggregation Pipelines against a single unified `reviews` collection.
 - **Intelligent Insight Feed**: Topic-based filtering (Service, Cleanliness, Food, Experience) combined with binary sentiment sorting for rapid response to critical feedback.
-- **Reputation Momentum Visualization**: Multi-variable Time-series charting of historical rating trends and review velocity.
-- **Professional Reporting**: Refactored multi-sheet Excel export system generating comprehensive "Audit Reports" with branch-specific sheets and star-rating sorting.
-- **Premium UX/UI**: Dark-mode first design utilizing glassmorphism, Framer Motion micro-animations, and high-density information layouts.
-
-## 📸 Branch Analytics
-
-Detailed branch-level insights showing localized topic analysis and historical momentum:
-
-![Branch Detail View](./public/assets/documentation/dashboard_branch.png)
+- **Professional Reporting**: Multi-sheet Excel export system generating comprehensive "Audit Reports" with branch-specific sheets and star-rating sorting.
+- **Apple-Inspired Minimalism**: A premium, content-first user interface utilizing a strict binary color rhythm (Light/Dark mode), native Apple typography (`SF Pro`), flat elevations, and `Apple Blue` interactive accents, replacing legacy glassmorphism.
 
 ## 🛠️ Technical Stack
 
@@ -25,48 +16,40 @@ Detailed branch-level insights showing localized topic analysis and historical m
 | :--- | :--- |
 | **Framework** | [Next.js 16](https://nextjs.org/) (App Router & Turbopack) |
 | **Logic** | TypeScript / React 19 |
-| **Database** | Prisma ORM with SQLite (Dimensions/Fact Architecture) |
-| **Styling** | TailwindCSS + Framer Motion |
-| **External API** | [SerpAPI](https://serpapi.com/) (Google Maps Reviews Engine) |
+| **Database** | Native MongoDB Driver (Aggregating dynamic metrics via pipeline) |
+| **Styling** | TailwindCSS + Custom CSS Design Tokens |
+| **External API** | Custom FastAPI Python Crawler (Google Maps Reviews Engine) |
 | **Reporting** | SheetJS (XLSX) |
 
 ## 📦 Getting Started
 
 ### 1. Prerequisites
 - Node.js 18+ 
-- SerpAPI Key ([Get it here](https://serpapi.com/))
+- MongoDB Instance (Local or Atlas)
 
 ### 2. Installation
 ```bash
-git clone https://github.com/yourusername/cinema-reputation-monitor.git
-cd web-app
+git clone https://github.com/phucanhle/online-reputation-management-system.git
+cd online-reputation-management-system
 npm install
 ```
 
 ### 3. Environment Setup
-Create a `.env` file in the root:
+Create a `.env` file in the root directory:
 ```env
-SERP_API_KEY="YOUR_KEY_HERE"
-DATABASE_URL="file:./dev.db"
+MONGODB_URI="mongodb://localhost:27017/orms_db?directConnection=true"
 ```
+*(Note: Replace the `MONGODB_URI` with your actual MongoDB connection string. Direct connection is recommended for local Replica Set setups to bypass DNS SRV issues).*
 
-### 4. Database Initialization
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-### 5. Launch
+### 4. Launch
 ```bash
 npm run dev
 ```
 
 ## 🌍 Deployment
 
-This project is optimized for deployment on **Vercel**. 
-> [!NOTE]
-> Please refer to the **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** for specific instructions on handling SQLite persistence vs Hosted Databases in production.
+This project is optimized for deployment on modern Edge/Serverless environments like **Vercel**. Since the application now utilizes a native MongoDB driver with dynamic pipelines, it scales effortlessly without the need for complex ORM query engines.
 
 ---
 
-Designed for modern cinema chains to stay ahead of the digital conversation.
+Designed for modern cinema chains to stay ahead of the digital conversation with cinematic pacing and precision.
