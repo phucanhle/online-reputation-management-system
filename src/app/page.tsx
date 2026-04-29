@@ -14,23 +14,17 @@ export default async function Dashboard() {
     const db = await getDb();
     const reviewsColl = db.collection<Review>('reviews');
 
-    // 1. Dynamically aggregate cinemas from reviews
-    const cinemasList = await reviewsColl.aggregate([
-      {
-        $group: {
-          _id: '$place_id',
-          place_name: { $first: '$company' },
-          avg_rating: { $avg: '$rating' },
-          total_reviews: { $sum: 1 }
-        }
-      }
-    ]).toArray();
+    // 1. Fetch cinemas directly from the 'places' collection
+    const placesColl = db.collection('places');
+    const cinemasList = await placesColl.find().toArray();
 
     const formattedCinemasList = cinemasList.map(c => ({
       ...c,
-      place_id: c._id,
-      total_reviews: c.total_reviews,
-      avg_rating: c.avg_rating
+      place_id: c.place_id,
+      place_name: c.place_name,
+      total_reviews: c.total_reviews || 0,
+      avg_rating: c.avg_rating || 0,
+      original_url: c.original_url || ''
     }));
 
     // We map each cinema to include its recent reviews to match the previous Prisma schema shape natively
