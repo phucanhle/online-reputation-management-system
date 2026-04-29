@@ -115,7 +115,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
           <div className="flex-1 overflow-y-auto custom-scrollbar max-h-80 p-3 pt-0">
             {globalData.leaderboard.map((c, i) => (
               <button
-                key={c.placeId || i}
+                key={c.placeId || `leaderboard-${i}`}
                 onClick={() => { setActiveTab(c.placeId); setViewMode('branch'); }}
                 className="w-full flex items-center justify-between px-3 py-3 rounded-lg text-left hover:bg-[var(--surface-2)] transition-colors group"
               >
@@ -213,7 +213,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                 const isDecrease = alert.delta < 0;
                 return (
                   <button
-                    key={alert.placeId || idx}
+                    key={alert.placeId || `alert-${idx}`}
                     onClick={() => { setActiveTab(alert.placeId); setViewMode('branch'); }}
                     className="flex items-center justify-between p-4 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] rounded-[8px] text-left transition-all group active:scale-[0.98]"
                   >

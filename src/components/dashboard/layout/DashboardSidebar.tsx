@@ -157,7 +157,7 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
                 const shortName = (c.place_name || '').replace(/LOTTE Cinema\s*/gi, '').trim() || c.name || 'Unknown';
                 return (
                   <button
-                    key={c.place_id}
+                    key={c.placeId}
                     onClick={() => { setViewMode('branch'); setActiveTab(c.placeId); setIsMobileSidebarOpen(false); }}
                     className={`
                       group w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-all duration-200

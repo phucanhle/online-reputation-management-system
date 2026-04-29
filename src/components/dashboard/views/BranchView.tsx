@@ -187,7 +187,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
             {/* Review cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredReviews.slice(0, visibleReviewsCount).map((r: any, idx: number) => (
-                <ReviewCard key={r._id || r.reviewId || idx} review={r} highlightedReviewId={highlightedReviewId} />
+                <ReviewCard key={r._id || r.reviewId || `review-${idx}`} review={r} highlightedReviewId={highlightedReviewId} />
               ))}
             </div>
 
