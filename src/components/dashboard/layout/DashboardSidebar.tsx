@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Search, X, LayoutDashboard, TrendingUp, Building2, DownloadCloud, Activity, ArrowUpDown } from 'lucide-react';
+import { Globe, Search, X, Building2, DownloadCloud, Activity, ArrowUpDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getTags } from '../utils';
 import { DashboardState } from '../hooks/useDashboardData';
@@ -69,23 +69,19 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
           transition-transform duration-300 lg:translate-x-0
           ${isMobileSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
         `}
-        style={{ borderRight: 'none' }}
       >
         {/* Brand */}
         <div className="px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-[8px] bg-[#0071e3] flex items-center justify-center flex-shrink-0">
-                <Activity className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-[var(--text-primary)] flex items-center justify-center flex-shrink-0">
+                <Activity className="w-4 h-4 text-[var(--bg-main)]" />
               </div>
               <div>
-                <p
-                  className="text-[15px] font-bold text-primary leading-none"
-                  style={{ letterSpacing: '0.231px', fontFamily: '"SF Pro Display", -apple-system, sans-serif' }}
-                >
+                <p className="text-[17px] font-semibold text-primary leading-tight sf-text-body">
                   ORMS
                 </p>
-                <p className="text-[11px] text-tertiary mt-1 uppercase font-bold tracking-wider leading-none">
+                <p className="sf-text-caption text-tertiary">
                   Reputation Monitor
                 </p>
               </div>
@@ -104,15 +100,14 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
           <button
             onClick={() => { setViewMode('global'); setIsMobileSidebarOpen(false); }}
             className={`
-              w-full flex items-center gap-3 px-3 py-2 rounded-[8px] text-[14px] font-medium transition-all text-left
+              w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-medium transition-all duration-200 text-left sf-text-caption
               ${viewMode === 'global'
-                ? 'bg-[#0071e3]/10 text-[#0071e3]'
+                ? 'bg-[var(--apple-blue)] text-white'
                 : 'text-secondary hover:text-primary hover:bg-[var(--surface-2)]'
               }
             `}
-            style={{ letterSpacing: '-0.224px' }}
           >
-            <Globe className={`w-4 h-4 flex-shrink-0 ${viewMode === 'global' ? 'text-[#0071e3]' : ''}`} />
+            <Globe className={`w-4 h-4 flex-shrink-0`} />
             Overview
           </button>
         </nav>
@@ -121,10 +116,7 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
         <div className="flex-1 flex flex-col min-h-0 px-3 py-6">
           {/* Header row */}
           <div className="flex items-center justify-between mb-2 px-3">
-            <p
-              className="text-[11px] font-bold text-tertiary uppercase tracking-wider"
-              style={{ letterSpacing: '0.05em' }}
-            >
+            <p className="sf-text-caption text-tertiary font-semibold uppercase text-[11px]">
               Branches
             </p>
             <button
@@ -145,8 +137,7 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
               placeholder="Find branch..."
               value={cinemaSearchQuery}
               onChange={e => setCinemaSearchQuery(e.target.value)}
-              className="w-full h-8 bg-[var(--surface-3)] border-none focus:bg-[var(--surface-2)] rounded-[11px] pl-9 pr-8 text-[13px] text-primary placeholder:text-tertiary outline-none transition-all"
-              style={{ letterSpacing: '-0.12px' }}
+              className="w-full h-8 bg-[var(--surface-2)] border border-[var(--border-color)] focus:border-[var(--apple-blue)] rounded-[11px] pl-9 pr-8 text-[13px] text-primary placeholder:text-tertiary outline-none transition-all sf-text-caption"
             />
             {cinemaSearchQuery && (
               <button
@@ -169,30 +160,27 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
                     key={c.place_id}
                     onClick={() => { setViewMode('branch'); setActiveTab(c.placeId); setIsMobileSidebarOpen(false); }}
                     className={`
-                      group w-full flex items-center justify-between px-3 py-2 rounded-[8px] text-left transition-all
+                      group w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-all duration-200
                       ${isActive
-                        ? 'bg-[#0071e3]/10 text-[#0071e3]'
+                        ? 'bg-[var(--apple-blue)]/10'
                         : 'text-secondary hover:text-primary hover:bg-[var(--surface-2)]'
                       }
                     `}
                   >
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                      <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#0071e3]' : 'text-tertiary group-hover:text-secondary'}`} />
-                      <span
-                        className="text-[13px] font-medium truncate"
-                        style={{ letterSpacing: '-0.12px' }}
-                      >
+                      <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[var(--apple-blue)]' : 'text-tertiary group-hover:text-secondary'}`} />
+                      <span className={`text-[13px] font-medium truncate sf-text-caption ${isActive ? 'text-[var(--apple-blue)]' : 'text-primary'}`}>
                         {shortName}
                       </span>
                     </div>
                     <div className="flex flex-col items-end gap-0 flex-shrink-0 ml-2">
                       {c.currentAverageRating > 0 && (
-                        <span className={`text-[11px] font-bold tabular-nums leading-tight ${isActive ? 'text-[#0071e3]' : 'text-amber-500'}`}>
+                        <span className={`text-[11px] font-semibold tabular-nums leading-tight ${isActive ? 'text-[var(--apple-blue)]' : 'text-primary'}`}>
                           {c.currentAverageRating.toFixed(1)}
                         </span>
                       )}
                       {c.currentTotalReviews > 0 && (
-                        <span className="text-[10px] text-tertiary tabular-nums leading-tight">
+                        <span className={`text-[10px] tabular-nums leading-tight ${isActive ? 'text-[var(--apple-blue)] opacity-80' : 'text-tertiary'}`}>
                           {c.currentTotalReviews.toLocaleString()}
                         </span>
                       )}
@@ -208,8 +196,7 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
         <div className="px-3 py-4 border-t border-[var(--border-color)]">
           <button
             onClick={exportToExcel}
-            className="w-full flex items-center justify-center gap-2 h-9 px-4 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--border-color)] rounded-apple text-[13px] font-medium text-secondary hover:text-primary transition-colors"
-            style={{ letterSpacing: '-0.12px' }}
+            className="w-full flex items-center justify-center gap-2 h-9 px-4 bg-[var(--surface-2)] border border-[var(--border-color)] rounded-lg text-[13px] sf-text-caption text-secondary hover:text-primary transition-all duration-200 hover:bg-[var(--bg-main)]"
           >
             <DownloadCloud className="w-4 h-4" />
             Export Audit

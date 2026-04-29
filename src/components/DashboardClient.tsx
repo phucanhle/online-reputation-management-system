@@ -39,7 +39,7 @@ export default function DashboardClient({
           </div>
 
           {/* Page content */}
-          <div className="flex-1 p-6 lg:p-10 flex flex-col gap-8 bg-[var(--bg-main)]">
+          <div className="flex-1 flex flex-col pb-20">
             {state.viewMode === 'global' ? (
               <GlobalView state={state} />
             ) : (

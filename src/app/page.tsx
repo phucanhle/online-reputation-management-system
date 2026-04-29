@@ -12,12 +12,27 @@ export default async function Dashboard() {
 
   try {
     const db = await getDb();
-    const cinemasColl = db.collection<Cinema>('places');
     const reviewsColl = db.collection<Review>('reviews');
 
-    // 1. Fetch cinemas with their top 50 recent reviews
-    const cinemasList = await cinemasColl.find().toArray();
-    
+    // 1. Dynamically aggregate cinemas from reviews
+    const cinemasList = await reviewsColl.aggregate([
+      {
+        $group: {
+          _id: '$place_id',
+          place_name: { $first: '$company' },
+          avg_rating: { $avg: '$rating' },
+          total_reviews: { $sum: 1 }
+        }
+      }
+    ]).toArray();
+
+    const formattedCinemasList = cinemasList.map(c => ({
+      ...c,
+      place_id: c._id,
+      total_reviews: c.total_reviews,
+      avg_rating: c.avg_rating
+    }));
+
     // We map each cinema to include its recent reviews to match the previous Prisma schema shape natively
     cinemas = await Promise.all(cinemasList.map(async (c: any) => {
         // Find reviews by place_id, excluding soft-deleted ones
@@ -29,15 +44,10 @@ export default async function Dashboard() {
         };
     }));
 
-    // 2. Compute Global Metrics from Official Stats (Network-wide reality)
-    const validCinemas = cinemasList.filter(c => (c as any).avg_rating > 0 && (c as any).total_reviews > 0);
-    const totalNetworkReviews = cinemasList.reduce((acc, c: any) => acc + (c.total_reviews || 0), 0);
-    const weightedSum = cinemasList.reduce((acc, c: any) => acc + ((c.avg_rating || 0) * (c.total_reviews || 0)), 0);
+    // 2. Compute Global Metrics from aggregated Stats
+    const totalNetworkReviews = formattedCinemasList.reduce((acc, c: any) => acc + (c.total_reviews || 0), 0);
+    const weightedSum = formattedCinemasList.reduce((acc, c: any) => acc + ((c.avg_rating || 0) * (c.total_reviews || 0)), 0);
     
-    const bg = cinemasList.find(c => ((c as any).place_name || '').includes('Bắc Giang'));
-    console.log(`[DEBUG] Network Total: ${totalNetworkReviews}, Weighted Avg: ${weightedSum / totalNetworkReviews}`);
-    console.log(`[DEBUG] Bắc Giang in DB: rating=${(bg as any)?.avg_rating}, total=${(bg as any)?.total_reviews}`);
-
     globalMetrics = {
       totalReviews: totalNetworkReviews,
       avgRating: totalNetworkReviews > 0 ? weightedSum / totalNetworkReviews : 0
@@ -46,11 +56,11 @@ export default async function Dashboard() {
     // 3. Fetch Per-branch Aggregates from Daily Metrics (Latest snapshot for each)
     const metricsColl = db.collection('branch_daily_metrics');
     
-    const branchAgg = await Promise.all(cinemasList.map(async (c: any) => {
-        const pid = c.place_id || c.placeId;
+    const branchAgg = await Promise.all(formattedCinemasList.map(async (c: any) => {
+        const pid = c.place_id;
         const latestMetric = await metricsColl.find({ place_id: pid }).sort({ date: -1 }).limit(1).toArray();
         
-        // Base structure from places (authoritative source for headline numbers)
+        // Base structure from reviews aggregation
         const base = {
           cinemaId: pid,
           _count: { _all: c.total_reviews ?? 0 },

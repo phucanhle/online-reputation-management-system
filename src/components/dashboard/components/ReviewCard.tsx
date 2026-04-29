@@ -45,19 +45,17 @@ export default function ReviewCard({
     ? { badge: '#34c759', badgeBg: 'rgba(52,199,89,0.10)' }
     : rating >= 3
       ? { badge: '#f59e0b', badgeBg: 'rgba(245,158,11,0.10)' }
-      : { badge: '#ff453a', badgeBg: 'rgba(255,69,58,0.10)' };
+      : { badge: '#ff3b30', badgeBg: 'rgba(255,59,48,0.10)' };
 
   return (
     <div
       id={`review-${r.reviewId}`}
       className={`
         group relative flex flex-col gap-4 p-6
-        bg-[var(--surface-1)] border-none
-        rounded-[8px] transition-all duration-300
-        hover:shadow-product
-        ${isHighlighted ? 'highlight-pulse ring-2 ring-[#0071e3]/40 z-10' : ''}
+        bg-[var(--surface-1)] border border-[var(--border-color)] rounded-[12px]
+        hover:border-[var(--apple-blue)] transition-all duration-300
+        ${isHighlighted ? 'ring-2 ring-[var(--apple-blue)] bg-[var(--surface-2)] z-10' : ''}
       `}
-      style={{ boxShadow: 'var(--shadow-product)' }}
     >
       {/* Author row */}
       <div className="flex items-start justify-between gap-3">
@@ -70,16 +68,10 @@ export default function ReviewCard({
             loading="lazy"
           />
           <div className="min-w-0">
-            <p
-              className="text-[14px] font-bold text-primary truncate leading-[1.29]"
-              style={{ letterSpacing: '-0.224px' }}
-            >
+            <p className="sf-text-body text-[15px] font-semibold text-primary truncate">
               {r.authorName || 'Anonymous'}
             </p>
-            <p
-              className="text-[12px] text-tertiary mt-0.5 leading-[1.33]"
-              style={{ letterSpacing: '-0.12px' }}
-            >
+            <p className="sf-text-caption text-[13px] text-tertiary mt-0.5">
               {rDate}
             </p>
           </div>
@@ -87,7 +79,7 @@ export default function ReviewCard({
 
         {/* Rating pill */}
         <div
-          className="flex items-center gap-1.5 px-3 py-1 rounded-[980px] flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full flex-shrink-0"
           style={{ background: ratingColor.badgeBg }}
         >
           <Star
@@ -95,8 +87,8 @@ export default function ReviewCard({
             style={{ color: ratingColor.badge }}
           />
           <span
-            className="text-[13px] font-bold tabular-nums"
-            style={{ color: ratingColor.badge, letterSpacing: '-0.12px' }}
+            className="sf-text-caption text-[13px] font-semibold tabular-nums"
+            style={{ color: ratingColor.badge }}
           >
             {rating.toFixed(0)}
           </span>
@@ -104,13 +96,10 @@ export default function ReviewCard({
       </div>
 
       {/* Review text */}
-      <p
-        className="text-[16px] text-primary leading-[1.47]"
-        style={{ letterSpacing: '-0.374px' }}
-      >
+      <p className="sf-text-body text-[15px] text-primary leading-relaxed">
         {rText
           ? `"${rText}"`
-          : <span className="opacity-30 italic text-[14px]">Không có nội dung đánh giá</span>
+          : <span className="opacity-40 italic">Không có nội dung đánh giá</span>
         }
       </p>
 
@@ -120,8 +109,7 @@ export default function ReviewCard({
           {tags.slice(0, 4).map(tag => (
             <span
               key={tag}
-              className="px-2 py-0.5 bg-[var(--surface-2)] rounded-[4px] text-[10px] font-bold text-tertiary whitespace-nowrap uppercase tracking-wider"
-              style={{ letterSpacing: '0.05em' }}
+              className="px-2 py-0.5 bg-[var(--surface-2)] border border-[var(--border-color)] rounded-[4px] sf-text-caption text-[11px] font-medium text-secondary whitespace-nowrap uppercase tracking-wider"
             >
               {tag}
             </span>
@@ -130,7 +118,7 @@ export default function ReviewCard({
         {r.isoDate && (
           <div className="flex items-center gap-1.5 text-tertiary flex-shrink-0 opacity-60">
             <CalendarDays className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-medium" style={{ letterSpacing: '-0.12px' }}>
+            <span className="sf-text-caption text-[12px]">
               {new Date(r.isoDate).toLocaleDateString('vi-VN')}
             </span>
           </div>
