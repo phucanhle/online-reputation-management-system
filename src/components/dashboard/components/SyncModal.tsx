@@ -52,13 +52,7 @@ export default function SyncModal({ state }: { state: DashboardState }) {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.96, opacity: 0, y: 12 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-xl overflow-hidden"
-          style={{
-            background: 'var(--surface-1)',
-            borderRadius: '12px',
-            boxShadow: 'var(--shadow-product)',
-            border: 'none',
-          }}
+          className="relative w-full max-w-xl overflow-hidden apple-card apple-card-elevated"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-6 pb-4">

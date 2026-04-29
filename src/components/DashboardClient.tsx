@@ -29,7 +29,7 @@ export default function DashboardClient({
       <SyncModal state={state} />
       <ActivityDrawer state={state} />
 
-      <div className="flex min-h-screen bg-background text-primary transition-colors duration-300">
+      <div className="flex min-h-screen bg-transparent text-primary transition-colors duration-300">
         <DashboardSidebar state={state} />
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">

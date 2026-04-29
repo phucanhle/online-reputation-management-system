@@ -171,7 +171,9 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                     cursor={{ fill: 'var(--border-color)' }}
                     contentStyle={{
                       backgroundColor: 'var(--surface-1)',
-                      border: 'none',
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      border: '1px solid var(--border-color)',
                       borderRadius: '8px',
                       color: 'var(--text-primary)',
                       fontSize: '14px',

@@ -51,7 +51,7 @@ export default function ActivityDrawer({ state }: { state: DashboardState }) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 z-[100] w-full max-w-sm bg-[var(--surface-1)] border-l border-[var(--border-color)] shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 bottom-0 z-[100] w-full max-w-sm sidebar-glass shadow-2xl flex flex-col"
           >
             {/* Header */}
             <div className="px-6 py-5 border-b border-[var(--border-color)] flex items-center justify-between">

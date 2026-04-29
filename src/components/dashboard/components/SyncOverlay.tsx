@@ -55,10 +55,8 @@ export default function SyncOverlay({ state }: { state: DashboardState }) {
         className="fixed bottom-6 right-6 z-[80] cursor-pointer group"
       >
         <div 
-          className="p-3 pr-4 flex items-center gap-3 shadow-product border border-[var(--border-color)] overflow-hidden min-w-[280px] max-w-sm"
+          className="p-3 pr-4 flex items-center gap-3 border border-[var(--border-color)] overflow-hidden min-w-[280px] max-w-sm apple-card apple-card-elevated"
           style={{ 
-            background: 'var(--surface-1)', 
-            backdropFilter: 'blur(20px) saturate(180%)',
             borderRadius: '980px' // Apple Pill Link shape
           }}
         >

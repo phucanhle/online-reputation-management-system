@@ -18,51 +18,67 @@
    CSS Variables — Apple Binary Light & Dark
    ============================================================ */
 :root {
-  /* Backgrounds */
-  --bg-main: #f5f5f7;
-  --surface-1: #ffffff;
-  --surface-2: #fafafc;
+  /* Ambient Background Gradient Base */
+  --bg-main: #f0f2f5;
+  --bg-gradient-1: #e0e7ff;
+  --bg-gradient-2: #dbeafe;
+  --bg-gradient-3: #f3e8ff;
+
+  /* Glass Surfaces (Light) */
+  --surface-1: rgba(255, 255, 255, 0.65);
+  --surface-2: rgba(255, 255, 255, 0.45);
+  --surface-3: rgba(255, 255, 255, 0.85);
 
   /* Text */
   --text-primary: #1d1d1f;
-  --text-secondary: rgba(0, 0, 0, 0.8);
-  --text-tertiary: rgba(0, 0, 0, 0.48);
+  --text-secondary: rgba(0, 0, 0, 0.7);
+  --text-tertiary: rgba(0, 0, 0, 0.5);
 
   /* Interactive */
   --apple-blue: #0071e3;
   --link-color: #0066cc;
   --focus-color: #0071e3;
 
-  /* Shadows */
-  --shadow-card: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
-  --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0px;
+  /* Glass Shadows & Highlights */
+  --shadow-card: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --shadow-product: 0 12px 48px 0 rgba(31, 38, 135, 0.1);
+  --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 1px 0 0 0 rgba(255, 255, 255, 0.4);
   
   /* Borders */
-  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color: rgba(255, 255, 255, 0.5);
+  --border-strong: rgba(0, 0, 0, 0.06);
 }
 
 .dark {
-  /* Backgrounds */
-  --bg-main: #000000;
-  --surface-1: #1d1d1f;
-  --surface-2: #272729;
+  /* Ambient Background Gradient Base */
+  --bg-main: #0a0a0c;
+  --bg-gradient-1: #1a1a2e;
+  --bg-gradient-2: #16213e;
+  --bg-gradient-3: #0f3460;
+
+  /* Glass Surfaces (Dark) */
+  --surface-1: rgba(25, 25, 28, 0.65);
+  --surface-2: rgba(35, 35, 40, 0.55);
+  --surface-3: rgba(45, 45, 50, 0.85);
 
   /* Text */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.8);
-  --text-tertiary: rgba(255, 255, 255, 0.48);
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
 
   /* Interactive */
-  --apple-blue: #0071e3;
+  --apple-blue: #0a84ff;
   --link-color: #2997ff;
-  --focus-color: #0071e3;
+  --focus-color: #0a84ff;
 
-  /* Shadows */
-  --shadow-card: rgba(0, 0, 0, 0.4) 3px 5px 30px 0px;
-  --shadow-product: rgba(0, 0, 0, 0.4) 3px 5px 30px 0px;
+  /* Glass Shadows & Highlights */
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  --shadow-product: 0 12px 48px 0 rgba(0, 0, 0, 0.6);
+  --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), inset 1px 0 0 0 rgba(255, 255, 255, 0.05);
   
   /* Borders */
   --border-color: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
 }
 
 /* ============================================================
@@ -94,45 +110,87 @@
 }
 
 /* ============================================================
-   Apple UI Utilities
+   Apple UI Utilities (Glassmorphism)
    ============================================================ */
 .apple-nav {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: none;
-}
-
-.dark .apple-nav {
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--surface-1);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--glass-highlight);
 }
 
 .sidebar-glass {
-  background: var(--surface-1);
+  background: var(--surface-2);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-right: 1px solid var(--border-color);
-}
-
-.dark .sidebar-glass {
-  background: var(--surface-1);
+  box-shadow: var(--glass-highlight);
 }
 
 /* Card utilities */
 .apple-card {
   background: var(--surface-1);
-  border-radius: 8px;
-  box-shadow: none;
-  border: none;
-  transition: box-shadow 0.3s ease;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--glass-highlight), var(--shadow-card);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
 .apple-card-elevated {
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--glass-highlight), var(--shadow-product);
 }
 
 .apple-card:hover {
-  /* Minimal interaction as per Apple guidelines */
+  box-shadow: var(--glass-highlight), var(--shadow-product);
+  transform: translateY(-2px);
+}
+
+/* Atmospheric Background Classes */
+.glass-ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background-color: var(--bg-main);
+}
+
+.glass-ambient-bg::before,
+.glass-ambient-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.6;
+  animation: float 20s infinite ease-in-out;
+}
+
+.glass-ambient-bg::before {
+  width: 600px;
+  height: 600px;
+  background: var(--bg-gradient-1);
+  top: -100px;
+  left: -100px;
+}
+
+.glass-ambient-bg::after {
+  width: 500px;
+  height: 500px;
+  background: var(--bg-gradient-2);
+  bottom: -100px;
+  right: -100px;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(10%, 10%); }
+  50% { transform: translate(5%, 15%); }
+  75% { transform: translate(-5%, 5%); }
 }
 
 /* Typography Classes */

@@ -20,7 +20,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body className="font-sans antialiased text-primary bg-background">
+      <body className="font-sans antialiased text-primary bg-transparent min-h-screen">
+        <div className="glass-ambient-bg" />
         <Providers>
           {children}
         </Providers>
