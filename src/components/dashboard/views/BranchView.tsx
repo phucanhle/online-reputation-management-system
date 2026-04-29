@@ -155,7 +155,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
                 </div>
                 {/* Sort */}
                 <button
-                  onClick={() => setSortOrder((s: string) => s === 'desc' ? 'asc' : 'desc')}
+                  onClick={() => setSortOrder((s: 'desc' | 'asc') => s === 'desc' ? 'asc' : 'desc')}
                   className="p-2 bg-[var(--surface-2)] border border-[var(--border-color)] hover:bg-[var(--surface-1)] rounded-[8px] text-tertiary hover:text-secondary transition-colors"
                   title="Sort by date"
                 >
@@ -224,7 +224,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
                 Topic Analysis
               </h4>
               <button
-                onClick={() => setTopicSort((s: string) => s === 'rating-desc' ? 'rating-asc' : 'rating-desc')}
+                onClick={() => setTopicSort((s: 'rating-desc' | 'rating-asc') => s === 'rating-desc' ? 'rating-asc' : 'rating-desc')}
                 className="px-3 py-1 text-[13px] font-medium text-tertiary hover:text-secondary bg-[var(--surface-2)] border border-[var(--border-color)] rounded-full transition-all sf-text-caption"
                 title="Toggle sort"
               >

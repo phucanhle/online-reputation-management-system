@@ -18,8 +18,16 @@ export default function GlobalView({ state }: { state: DashboardState }) {
   } = state;
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  const [chartReady, setChartReady] = React.useState(false);
 
   React.useEffect(() => { setMounted(true); }, []);
+  React.useEffect(() => {
+    if (mounted) {
+      // Delay chart rendering to ensure container has valid dimensions after paint
+      const timer = setTimeout(() => setChartReady(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [mounted]);
   const isDark = mounted && resolvedTheme === 'dark';
 
   const kpiCards = [
@@ -154,6 +162,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
           </div>
           <div className="p-6 pt-0 mt-4">
             <div className="w-full h-64">
+              {chartReady ? (
               <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={globalData.sentimentDistribution} barGap={4}>
                   <XAxis
@@ -182,6 +191,9 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                   />
                 </BarChart>
               </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full bg-[var(--surface-2)] rounded-lg animate-pulse" />
+              )}
             </div>
           </div>
         </div>
@@ -270,7 +282,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCriticalSort((s: string) => s === 'date' ? 'rating' : 'date')}
+              onClick={() => setCriticalSort((s: 'date' | 'rating') => s === 'date' ? 'rating' : 'date')}
               className="px-3 py-1.5 text-[13px] font-medium text-tertiary hover:text-secondary bg-[var(--surface-2)] border border-[var(--border-color)] rounded-full transition-colors sf-text-caption"
             >
               {criticalSort === 'date' ? 'Newest first' : 'Lowest first'}

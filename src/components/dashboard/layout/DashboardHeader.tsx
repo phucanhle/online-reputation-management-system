@@ -13,7 +13,8 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
     isActivityDrawerOpen,
     setIsActivityDrawerOpen,
     setIsSyncModalOpen,
-    setIsMobileSidebarOpen
+    setIsMobileSidebarOpen,
+    cinemasWithLatest
   } = state;
 
   const { resolvedTheme, setTheme } = useTheme();
@@ -51,7 +52,7 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
           {viewMode === 'global' && (
             <div className="flex items-center gap-1.5 mt-0.5">
               <div className="w-1.5 h-1.5 rounded-full bg-[var(--apple-blue)]" />
-              <span className="sf-text-caption text-[10px] text-tertiary uppercase font-medium">44 nodes online</span>
+              <span className="sf-text-caption text-[10px] text-tertiary uppercase font-medium">{cinemasWithLatest.length} nodes online</span>
             </div>
           )}
         </div>

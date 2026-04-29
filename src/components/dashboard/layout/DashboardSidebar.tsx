@@ -47,7 +47,7 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
   };
 
   const cycleSidebarSort = () => {
-    setSidebarSort((s: string) => s === 'name' ? 'rating-desc' : s === 'rating-desc' ? 'rating-asc' : 'name');
+    setSidebarSort((s: 'name' | 'rating-desc' | 'rating-asc') => s === 'name' ? 'rating-desc' : s === 'rating-desc' ? 'rating-asc' : 'name');
   };
 
   const sortLabel = sidebarSort === 'name' ? 'A–Z' : sidebarSort === 'rating-desc' ? '★ High' : '★ Low';
