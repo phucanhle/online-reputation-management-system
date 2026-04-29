@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ShieldCheck, MessageSquareQuote, Building2, AlertTriangle,
-  TrendingUp, BarChart3, Star, Search, Activity
+  TrendingUp, TrendingDown, BarChart3, Star, Search, Activity
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
@@ -210,6 +210,73 @@ export default function GlobalView({ state }: { state: DashboardState }) {
           </div>
         </div>
       </div>
+
+      {/* ── Review Fluctuation ── */}
+      {globalData.reviewFluctuationAlerts && globalData.reviewFluctuationAlerts.length > 0 && (
+        <div className="apple-card">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <TrendingDown className="w-5 h-5 text-[#ff9500]" />
+              <h3
+                className="text-[21px] font-bold text-primary leading-[1.19]"
+                style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', letterSpacing: '0.231px' }}
+              >
+                Review Fluctuation
+              </h3>
+              {globalData.reviewFluctuationAlerts.filter((a: any) => a.delta < 0).length > 0 && (
+                <span className="px-2 py-0.5 bg-[#ff453a]/10 text-[#ff453a] text-[11px] font-bold rounded-[980px] tabular-nums">
+                  {globalData.reviewFluctuationAlerts.filter((a: any) => a.delta < 0).length} decreased
+                </span>
+              )}
+            </div>
+            <p className="text-[13px] text-tertiary leading-[1.47]" style={{ letterSpacing: '-0.374px' }}>
+              Day-over-day review count changes across branches
+            </p>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {globalData.reviewFluctuationAlerts.map((alert: any, idx: number) => {
+                const isDecrease = alert.delta < 0;
+                return (
+                  <button
+                    key={alert.placeId || idx}
+                    onClick={() => { setActiveTab(alert.placeId); setViewMode('branch'); }}
+                    className="flex items-center justify-between p-4 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] rounded-[8px] text-left transition-all group active:scale-[0.98]"
+                  >
+                    <div className="min-w-0 overflow-hidden">
+                      <p
+                        className="text-[14px] font-bold text-primary truncate leading-[1.29] group-hover:text-[#0071e3] transition-colors"
+                        style={{ letterSpacing: '-0.224px' }}
+                      >
+                        {(alert.name ?? '').replace(/Lotte Cinema\s*/gi, '').trim() || alert.name}
+                      </p>
+                      <p className="text-[12px] text-tertiary mt-0.5 tabular-nums" style={{ letterSpacing: '-0.12px' }}>
+                        {alert.totalReviews?.toLocaleString()} reviews
+                      </p>
+                    </div>
+                    <div
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-[980px] flex-shrink-0 ${
+                        isDecrease
+                          ? 'bg-[#ff453a]/10 text-[#ff453a]'
+                          : 'bg-[#34c759]/10 text-[#34c759]'
+                      }`}
+                    >
+                      {isDecrease ? (
+                        <TrendingDown className="w-3.5 h-3.5" />
+                      ) : (
+                        <TrendingUp className="w-3.5 h-3.5" />
+                      )}
+                      <span className="text-[12px] font-bold tabular-nums">
+                        {isDecrease ? '' : '+'}{alert.delta}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Critical Feed ── */}
       <div className="apple-card">

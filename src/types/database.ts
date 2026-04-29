@@ -50,6 +50,7 @@ export interface BranchDailyMetrics {
   sentiment_score: number;
   density_30d: number;
   reviews_last_30d: number;
+  review_delta: number; // Day-over-day change in total_reviews (positive=increase, negative=decrease)
   star_distribution: {
     1: number;
     2: number;

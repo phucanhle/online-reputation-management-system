@@ -4,13 +4,19 @@
  * Helper functions to communicate with the FastAPI api_server.py
  */
 
-export const API_SERVER_URL = process.env.API_SERVER_URL || 'https://google-review-craw-658219259966.europe-west1.run.app';
+export const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:8000';
 
 export type SyncProgress = {
   cinema: string;
   status: 'loading' | 'success' | 'error';
   message?: string;
   jobId?: string;
+  /** Live count of reviews scraped so far */
+  reviewCount?: number;
+  /** Current scraper phase: navigating, analyzing, scraped, completed, failed */
+  phase?: string;
+  /** Resolved place name from Google Maps */
+  placeName?: string;
 };
 
 /**

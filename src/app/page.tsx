@@ -20,8 +20,8 @@ export default async function Dashboard() {
     
     // We map each cinema to include its recent reviews to match the previous Prisma schema shape natively
     cinemas = await Promise.all(cinemasList.map(async (c: any) => {
-        // Find reviews by place_id since that's what the raw mongo documents have
-        const branchReviews = await reviewsColl.find({ place_id: c.place_id || c.placeId } as any).sort({ review_date: -1, isoDate: -1 } as any).limit(50).toArray();
+        // Find reviews by place_id, excluding soft-deleted ones
+        const branchReviews = await reviewsColl.find({ place_id: c.place_id || c.placeId, is_deleted: { $ne: 1 } } as any).sort({ review_date: -1, isoDate: -1 } as any).limit(50).toArray();
         const mappedCinema = mapCinema(c);
         return {
           ...mappedCinema,

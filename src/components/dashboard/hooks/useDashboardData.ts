@@ -35,6 +35,7 @@ export function useDashboardData(
   const [historicalMetrics, setHistoricalMetrics] = useState<any[]>([]);
   const [isMetricsLoading, setIsMetricsLoading] = useState(false);
   const [officialStatsMap, setOfficialStatsMap] = useState<Record<string, { avgRating: number, totalReviews: number, capturedReviews: number }>>({});
+  const [reviewDeltas, setReviewDeltas] = useState<Record<string, number>>({});
 
   // -- Debounced States for Search Optimization --
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
@@ -75,7 +76,23 @@ export function useDashboardData(
         console.error('Failed to load official stats:', err);
       }
     };
+    const fetchReviewDeltas = async () => {
+      try {
+        const res = await fetch('/api/metrics?includeDelta=true');
+        const data = await res.json();
+        if (data.snapshots) {
+          const deltaMap: Record<string, number> = {};
+          data.snapshots.forEach((s: any) => {
+            deltaMap[s.placeId] = s.reviewDelta ?? 0;
+          });
+          setReviewDeltas(deltaMap);
+        }
+      } catch (err) {
+        console.error('Failed to load review deltas:', err);
+      }
+    };
     fetchOfficialStats();
+    fetchReviewDeltas();
   }, [mounted, isSyncing]);
 
   // Create lookups for faster compute
@@ -201,6 +218,21 @@ export function useDashboardData(
     const weightedSum = cinemasWithLatest.reduce((acc, c: any) => acc + ((c.currentAverageRating || 0) * (c.currentTotalReviews || 0)), 0);
     const dynamicAvgRating = totalGoogleReviews > 0 ? (weightedSum / totalGoogleReviews) : globalMetrics.avgRating;
 
+    // --- Review Fluctuation Alerts (from deltas) ---
+    const reviewFluctuationAlerts = cinemasWithLatest
+      .map(c => {
+        const pid = c.place_id || c.placeId;
+        const delta = reviewDeltas[pid] ?? 0;
+        return {
+          placeId: pid,
+          name: c.place_name || c.name,
+          totalReviews: c.currentTotalReviews,
+          delta,
+        };
+      })
+      .filter(a => a.delta !== 0)
+      .sort((a, b) => a.delta - b.delta); // Most negative first
+
     return {
       avgRating: dynamicAvgRating.toFixed(2),
       totalReviews: totalCapturedReviews,
@@ -208,6 +240,7 @@ export function useDashboardData(
       totalCapturedReviews,
       leaderboard,
       criticalAlerts,
+      reviewFluctuationAlerts,
       sentimentDistribution: [
         { name: '1 ★', count: sentimentCounts[0], fill: '#ef4444' },
         { name: '2 ★', count: sentimentCounts[1], fill: '#f97316' },
@@ -216,7 +249,7 @@ export function useDashboardData(
         { name: '5 ★', count: sentimentCounts[4], fill: '#10b981' }
       ]
     };
-  }, [cinemasWithLatest, leaderboardSort, criticalSort, globalMetrics]);
+  }, [cinemasWithLatest, leaderboardSort, criticalSort, globalMetrics, reviewDeltas]);
 
   const activeCinema = useMemo(() => cinemasWithLatest.find(c => c.placeId === activeTab) || cinemasWithLatest[0], [cinemasWithLatest, activeTab]);
 
@@ -263,13 +296,27 @@ export function useDashboardData(
     setSyncLogs([{ cinema: 'System', status: 'loading', message: officialOnly ? 'Đang thực hiện đồng bộ nhanh...' : 'Đang khởi động Python scraper...' }]);
 
     try {
-      const selectedData = target === 'selected' 
-        ? cinemasWithLatest.filter(c => selectedCinemasForSync.includes(c.placeId)).map(c => ({
-            id: c.placeId,
-            url: c.originalUrl,
-            name: c.name
-          }))
-        : [];
+      let selectedData: { id: string, url: string, name: string }[] = [];
+      
+      if (target === 'selected') {
+        // If specific cinemas were selected in the sync modal, use those
+        if (selectedCinemasForSync.length > 0) {
+          selectedData = cinemasWithLatest
+            .filter(c => selectedCinemasForSync.includes(c.placeId))
+            .map(c => ({
+              id: c.placeId,
+              url: c.originalUrl || '',
+              name: c.name
+            }));
+        } else if (activeCinema) {
+          // Fallback: use the currently active cinema (from BranchView Sync button)
+          selectedData = [{
+            id: activeCinema.placeId,
+            url: activeCinema.originalUrl || '',
+            name: activeCinema.name
+          }];
+        }
+      }
 
       const resp = await fetch('/api/scrape', { 
         method: 'POST',
@@ -354,6 +401,7 @@ export function useDashboardData(
     isLoadingMore,
     loadMoreReviews,
     startCloudSync,
+    reviewDeltas,
     hasMore: (totalReviewsAvailable[activeTab] || activeCinema?.currentTotalReviews || 0) > (activeCinema?.reviews?.length || 0)
   };
 }

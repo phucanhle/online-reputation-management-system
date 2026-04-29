@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  Star, TrendingUp, BarChart3,
-  Tags, FilterX, CalendarDays, Search, Activity, RefreshCcw, Loader2
+  Star, TrendingUp, TrendingDown, BarChart3,
+  Tags, FilterX, CalendarDays, Search, Activity, RefreshCcw, Loader2, MessageSquareQuote
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { DashboardState } from '../hooks/useDashboardData';
@@ -18,6 +18,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
     visibleReviewsCount,
     highlightedReviewId,
     topicSort, setTopicSort,
+    reviewDeltas,
   } = state;
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
@@ -25,6 +26,9 @@ export default function BranchView({ state }: { state: DashboardState }) {
   const isDark = mounted && resolvedTheme === 'dark';
 
   const chartGridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+  const pid = (activeCinema as any).place_id || (activeCinema as any).placeId || '';
+  const currentDelta = reviewDeltas?.[pid] ?? 0;
 
   const kpiCards = [
     {
@@ -34,6 +38,18 @@ export default function BranchView({ state }: { state: DashboardState }) {
       icon: Star,
       iconClass: 'fill-amber-500 text-amber-500',
       accent: '#f59e0b',
+      delta: null as number | null,
+    },
+    {
+      label: 'Google Reviews',
+      val: (activeCinema as any).currentTotalReviews?.toLocaleString() ?? '0',
+      sub: currentDelta !== 0
+        ? `${currentDelta > 0 ? '+' : ''}${currentDelta} since last update`
+        : 'Official count',
+      icon: MessageSquareQuote,
+      iconClass: 'text-[#0071e3]',
+      accent: '#0071e3',
+      delta: currentDelta,
     },
     {
       label: 'Captured Total',
@@ -42,6 +58,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
       icon: Activity,
       iconClass: 'text-[#af52de]',
       accent: '#af52de',
+      delta: null as number | null,
     },
   ];
 
@@ -53,7 +70,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
         <div className="lg:col-span-8 flex flex-col gap-6">
 
             {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             {kpiCards.map((k, i) => (
               <div key={i} className="apple-card p-6 flex flex-col gap-4">
                 <div
@@ -69,12 +86,30 @@ export default function BranchView({ state }: { state: DashboardState }) {
                     >
                         {k.label}
                     </p>
-                    <p
-                        className="text-3xl font-bold text-primary mt-1.5 leading-[1.07] tabular-nums"
-                        style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', letterSpacing: '-0.28px' }}
-                    >
-                        {k.val}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                        <p
+                            className="text-3xl font-bold text-primary leading-[1.07] tabular-nums"
+                            style={{ fontFamily: '"SF Pro Display", -apple-system, sans-serif', letterSpacing: '-0.28px' }}
+                        >
+                            {k.val}
+                        </p>
+                        {k.delta !== null && k.delta !== 0 && (
+                          <span
+                            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-[4px] text-[11px] font-bold tabular-nums ${
+                              k.delta < 0
+                                ? 'bg-[#ff453a]/10 text-[#ff453a]'
+                                : 'bg-[#34c759]/10 text-[#34c759]'
+                            }`}
+                          >
+                            {k.delta < 0 ? (
+                              <TrendingDown className="w-3 h-3" />
+                            ) : (
+                              <TrendingUp className="w-3 h-3" />
+                            )}
+                            {k.delta > 0 ? '+' : ''}{k.delta}
+                          </span>
+                        )}
+                    </div>
                     <p className="text-[13px] text-tertiary mt-1.5 leading-[1.47]" style={{ letterSpacing: '-0.374px' }}>
                         {k.sub}
                     </p>

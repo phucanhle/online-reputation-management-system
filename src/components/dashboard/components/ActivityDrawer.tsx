@@ -1,7 +1,33 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RefreshCcw, Loader2, CheckCircle2, XCircle, Activity, Ghost } from 'lucide-react';
+import { X, RefreshCcw, Loader2, CheckCircle2, XCircle, Activity, Ghost, Link2, Search, Download, Settings, AlertTriangle } from 'lucide-react';
 import { DashboardState } from '../hooks/useDashboardData';
+
+/** Phase icon and color mapping */
+function getPhaseConfig(phase?: string) {
+  switch (phase) {
+    case 'navigating':
+      return { icon: Link2, color: '#5856d6', label: 'Connecting' };
+    case 'analyzing':
+      return { icon: Search, color: '#ff9f0a', label: 'Analyzing' };
+    case 'scraped':
+    case 'scraping':
+      return { icon: Download, color: '#0071e3', label: 'Scraping' };
+    case 'retrying':
+      return { icon: RefreshCcw, color: '#ff9f0a', label: 'Retrying' };
+    case 'initializing':
+    case 'starting':
+      return { icon: Settings, color: '#8e8e93', label: 'Initializing' };
+    case 'alert':
+      return { icon: AlertTriangle, color: '#ff453a', label: 'Alert' };
+    case 'completed':
+      return { icon: CheckCircle2, color: '#34c759', label: 'Done' };
+    case 'failed':
+      return { icon: XCircle, color: '#ff453a', label: 'Failed' };
+    default:
+      return { icon: Loader2, color: '#0071e3', label: 'Working' };
+  }
+}
 
 export default function ActivityDrawer({ state }: { state: DashboardState }) {
   const { isActivityDrawerOpen, setIsActivityDrawerOpen, isSyncing, syncLogs } = state;
@@ -59,41 +85,98 @@ export default function ActivityDrawer({ state }: { state: DashboardState }) {
                   <p className="text-[17px] font-normal leading-[1.47]" style={{ letterSpacing: '-0.374px' }}>No recent activity</p>
                 </div>
               ) : (
-                syncLogs.map((log, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 rounded-[8px] bg-[var(--surface-2)] border border-[var(--border-color)] flex flex-col gap-2 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="flex-shrink-0">
-                          {log.status === 'success' ? (
-                            <CheckCircle2 className="w-4 h-4 text-[#34c759]" />
-                          ) : log.status === 'error' ? (
-                            <XCircle className="w-4 h-4 text-[#ff453a]" />
-                          ) : (
-                            <Loader2 className="w-4 h-4 text-[#0071e3] animate-spin" />
-                          )}
+                syncLogs.map((log, idx) => {
+                  const phaseConfig = getPhaseConfig(log.phase);
+                  const PhaseIcon = phaseConfig.icon;
+                  const isActive = log.status === 'loading';
+                  const isDone = log.status === 'success';
+                  const isError = log.status === 'error';
+
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="relative p-4 rounded-[12px] bg-[var(--surface-2)] border border-[var(--border-color)] flex flex-col gap-2.5 shadow-sm overflow-hidden"
+                    >
+                      {/* Top row: icon + name + badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: `${phaseConfig.color}15` }}
+                          >
+                            {isDone ? (
+                              <CheckCircle2 className="w-3.5 h-3.5" style={{ color: '#34c759' }} />
+                            ) : isError ? (
+                              <XCircle className="w-3.5 h-3.5" style={{ color: '#ff453a' }} />
+                            ) : (
+                              <PhaseIcon
+                                className={`w-3.5 h-3.5 ${isActive && (log.phase === 'scraped' || !log.phase) ? 'animate-spin' : ''}`}
+                                style={{ color: phaseConfig.color }}
+                              />
+                            )}
+                          </div>
+                          <p className="text-[14px] font-semibold text-primary truncate leading-[1.29]" style={{ letterSpacing: '-0.224px' }}>
+                            {log.cinema}
+                          </p>
                         </div>
-                        <p className="text-[14px] font-semibold text-primary truncate leading-[1.29]" style={{ letterSpacing: '-0.224px' }}>
-                          {log.cinema}
-                        </p>
+                        {isDone && (
+                          <span className="text-[10px] font-bold text-[#34c759] uppercase tracking-[-0.08px] bg-[#34c759]/10 px-2 py-0.5 rounded-full flex-shrink-0">
+                            OK
+                          </span>
+                        )}
+                        {isActive && log.phase && (
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-[-0.08px] px-2 py-0.5 rounded-full flex-shrink-0"
+                            style={{
+                              color: phaseConfig.color,
+                              backgroundColor: `${phaseConfig.color}15`,
+                            }}
+                          >
+                            {phaseConfig.label}
+                          </span>
+                        )}
                       </div>
-                      {log.status === 'success' && (
-                        <span className="text-[10px] font-bold text-[#34c759] uppercase tracking-[-0.08px] bg-[#34c759]/10 px-2 py-0.5 rounded-apple">
-                          OK
-                        </span>
+
+                      {/* Message row */}
+                      {log.message && (
+                        <p className="text-[12px] text-secondary leading-[1.33] pl-[38px]" style={{ letterSpacing: '-0.12px' }}>
+                          {log.message}
+                        </p>
                       )}
-                    </div>
-                    {log.message && (
-                      <p className="text-[12px] text-secondary leading-[1.33]" style={{ letterSpacing: '-0.12px' }}>
-                        {log.message}
-                      </p>
-                    )}
-                  </motion.div>
-                ))
+
+                      {/* Live review count — only for scraping phase */}
+                      {isActive && log.phase === 'scraped' && log.reviewCount != null && log.reviewCount > 0 && (
+                        <div className="pl-[38px] flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#0071e3] animate-pulse" />
+                            <span className="text-[20px] font-bold text-primary tabular-nums" style={{ letterSpacing: '-0.6px' }}>
+                              {log.reviewCount}
+                            </span>
+                            <span className="text-[11px] text-secondary font-medium mt-0.5">reviews found</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bottom progress bar for active items */}
+                      {isActive && (
+                        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--border-color)]">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: phaseConfig.color }}
+                            initial={{ width: '5%' }}
+                            animate={{
+                              width: log.phase === 'scraped' ? '70%' : log.phase === 'navigating' ? '20%' : log.phase === 'analyzing' ? '40%' : '15%',
+                            }}
+                            transition={{ duration: 2, ease: 'easeOut' }}
+                          />
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })
               )}
             </div>
 
@@ -102,16 +185,23 @@ export default function ActivityDrawer({ state }: { state: DashboardState }) {
               <div className="p-5 bg-[#0071e3]/5 border-t border-[#0071e3]/10">
                 <div className="flex items-center gap-3">
                   <RefreshCcw className="w-4 h-4 text-[#0071e3] animate-spin" />
-                  <p className="text-[12px] font-semibold text-[#0071e3] leading-[1.33]" style={{ letterSpacing: '-0.12px' }}>
-                    Scraper is working in background...
-                  </p>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#0071e3] leading-[1.33]" style={{ letterSpacing: '-0.12px' }}>
+                      Scraper is working in background...
+                    </p>
+                    {syncLogs.filter(l => l.status === 'loading' && l.reviewCount && l.reviewCount > 0).length > 0 && (
+                      <p className="text-[11px] text-[#0071e3]/60 mt-0.5">
+                        {syncLogs.filter(l => l.status === 'loading').length} active · {syncLogs.filter(l => l.status === 'success').length} done
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
             <div className="p-5 border-t border-[var(--border-color)] bg-[var(--surface-1)]">
                 <button
                     onClick={() => setIsActivityDrawerOpen(false)}
-                    className="w-full py-2.5 bg-[#1d1d1f] text-white text-[17px] font-normal rounded-[8px] transition-all active:scale-[0.98] active:bg-[#000000]"
+                    className="w-full py-2.5 bg-[#1d1d1f] text-white text-[17px] font-normal rounded-[8px] transition-all active:scale-[0.98] active:bg-[#000000] hover:bg-[#333336]"
                     style={{ letterSpacing: '-0.374px', lineHeight: '1.47' }}
                 >
                     Dismiss

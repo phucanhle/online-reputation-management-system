@@ -16,7 +16,9 @@ export async function GET(request: Request) {
     const db = await getDb();
     const reviewsColl = db.collection<Review>('reviews');
 
-    const filter = cinemaId ? { place_id: cinemaId } : {}; // The DB has place_id, not cinemaId
+    const filter: any = cinemaId ? { place_id: cinemaId } : {};
+    // Exclude soft-deleted reviews (is_deleted=1 or absent field = not deleted)
+    filter.is_deleted = { $ne: 1 };
 
     const [reviews, total] = await Promise.all([
       reviewsColl.find(filter as any).sort({ review_date: -1, isoDate: -1 } as any).skip(skip).limit(limit).toArray(),

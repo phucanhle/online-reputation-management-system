@@ -20,15 +20,16 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Place not found in database' }, { status: 404 });
       }
 
-      // Đếm số lượng review thực tế đã cào được trong DB cho rạp này
-      const capturedCount = await reviewsColl.countDocuments({ place_id: placeId });
+      // Use pre-computed captured_reviews if available, otherwise count live
+      const capturedCount = place.captured_reviews
+        ?? await reviewsColl.countDocuments({ place_id: placeId, is_deleted: { $ne: 1 } });
 
       return NextResponse.json({
         placeId: place.place_id,
         name: place.place_name || place.name,
         avgRating: place.avg_rating ?? 0,
-        totalReviews: place.total_reviews ?? 0,
-        capturedReviews: capturedCount,
+        totalReviews: place.total_reviews ?? 0,   // Official Google count
+        capturedReviews: capturedCount,             // What's in our DB
         source: 'database',
         lastScraped: place.last_scraped || place.updated_at
       });
@@ -37,13 +38,14 @@ export async function GET(req: Request) {
       const places = await placesColl.find({}).toArray();
       
       const results = await Promise.all(places.map(async (place) => {
-        const capturedCount = await reviewsColl.countDocuments({ place_id: place.place_id });
+        const capturedCount = place.captured_reviews
+          ?? await reviewsColl.countDocuments({ place_id: place.place_id, is_deleted: { $ne: 1 } });
         return {
           placeId: place.place_id,
           name: place.place_name || place.name,
           avgRating: place.avg_rating ?? 0,
-          totalReviews: place.total_reviews ?? 0,
-          capturedReviews: capturedCount,
+          totalReviews: place.total_reviews ?? 0,   // Official Google count
+          capturedReviews: capturedCount,             // What's in our DB
           source: 'database',
           lastScraped: place.last_scraped || place.updated_at
         };

@@ -85,7 +85,16 @@ export async function runMetricsAggregation(onProgress?: (p: SyncProgress) => vo
         const recent30d = recent30dResult[0]?.count ?? 0;
         const density = recent30d / 30.0;
 
-        // 4. Ghi snapshot vào branch_daily_metrics
+        // 4. Compute review_delta (day-over-day change)
+        const yesterday = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+        const prevSnapshot = await metricsColl.findOne(
+          { place_id: pid, date: { $lt: todayStart } },
+          { sort: { date: -1 }, projection: { total_reviews: 1 } }
+        );
+        const prevTotal = prevSnapshot?.total_reviews ?? officialTotalReviews;
+        const reviewDelta = officialTotalReviews - prevTotal;
+
+        // 5. Ghi snapshot vào branch_daily_metrics
         await metricsColl.updateOne(
           { place_id: pid, date: todayStart },
           {
@@ -95,6 +104,7 @@ export async function runMetricsAggregation(onProgress?: (p: SyncProgress) => vo
               sentiment_score: Number(sentimentScore.toFixed(2)),
               density_30d: Number(density.toFixed(3)),
               reviews_last_30d: recent30d,
+              review_delta: reviewDelta,
               captured_reviews: dist.capturedTotal,
               star_distribution: {
                 '1': dist.star1,
