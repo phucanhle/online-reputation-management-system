@@ -25,6 +25,9 @@ export default function BranchView({ state }: { state: DashboardState }) {
   React.useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === 'dark';
 
+  const pid = (activeCinema as any).place_id || (activeCinema as any).placeId || '';
+  const currentDelta = reviewDeltas?.[pid] ?? 0;
+
   const kpiCards = [
     {
       label: 'Avg Rating',

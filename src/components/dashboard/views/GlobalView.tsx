@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ShieldCheck, MessageSquareQuote, Building2, AlertTriangle,
-  BarChart3, Star, Activity
+  BarChart3, Star, Activity, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';

@@ -39,9 +39,7 @@ const place = places[0];
         placeId: place._id,
         name: place.place_name,
         avgRating: place.avg_rating ?? 0,
-totalReviews: place.total_reviews ?? 0,
-        capturedReviews: place.total_reviews,
-totalReviews: place.total_reviews ?? 0,   // Official Google count
+        totalReviews: place.total_reviews ?? 0,   // Official Google count
         capturedReviews: capturedCount,             // What's in our DB
         source: 'database',
         lastScraped: place.last_scraped
@@ -60,22 +58,19 @@ totalReviews: place.total_reviews ?? 0,   // Official Google count
         }
       ]).toArray();
       
-const results = places.map((place) => {
-const results = await Promise.all(places.map(async (place) => {
+      const results = await Promise.all(places.map(async (place) => {
         const capturedCount = place.captured_reviews
           ?? await reviewsColl.countDocuments({ place_id: place.place_id, is_deleted: { $ne: 1 } });
         return {
           placeId: place._id,
           name: place.place_name,
           avgRating: place.avg_rating ?? 0,
-totalReviews: place.total_reviews ?? 0,
-          capturedReviews: place.total_reviews,
-totalReviews: place.total_reviews ?? 0,   // Official Google count
+          totalReviews: place.total_reviews ?? 0,   // Official Google count
           capturedReviews: capturedCount,             // What's in our DB
           source: 'database',
           lastScraped: place.last_scraped
         };
-      });
+      }));
 
       return NextResponse.json({ data: results });
     }
