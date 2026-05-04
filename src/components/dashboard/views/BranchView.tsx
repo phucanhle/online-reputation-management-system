@@ -6,6 +6,7 @@ import {
 import { useTheme } from 'next-themes';
 import { DashboardState } from '../hooks/useDashboardData';
 import ReviewCard from '../components/ReviewCard';
+import MetricsChart from '../components/MetricsChart';
 import { TAG_MAP, getTags } from '../utils';
 
 export default function BranchView({ state }: { state: DashboardState }) {
@@ -87,28 +88,28 @@ export default function BranchView({ state }: { state: DashboardState }) {
             ))}
           </div>
 
-          {/* Data Synchronization Area */}
-          <div className="apple-card apple-card-elevated p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6 overflow-hidden relative">
-            <div className="min-w-0 relative z-10">
-              <h4 className="sf-display-title text-[21px] text-primary">
-                Data Synchronization
-              </h4>
-              <p className="sf-text-body text-[15px] text-secondary mt-1">
-                Update latest metrics directly from Google Maps
-              </p>
+          {/* Performance Metrics Chart */}
+          <MetricsChart
+            placeId={pid}
+            placeName={activeCinema.name || activeCinema.place_name || ''}
+          />
+
+          {/* Sync Controls */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               {activeCinema.lastScraped && (
-                <div className="flex items-center gap-1.5 mt-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="sf-text-caption text-[12px] font-medium text-tertiary truncate">
-                    Last updated: {new Date(activeCinema.lastScraped).toLocaleString('vi-VN')}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-2)] border border-[var(--border-color)] rounded-[980px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="sf-text-caption text-[12px] font-medium text-tertiary">
+                    Last sync: {new Date(activeCinema.lastScraped).toLocaleString('vi-VN')}
                   </span>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => state.setIsActivityDrawerOpen(true)}
-                className="p-2.5 text-secondary hover:text-primary hover:bg-[var(--surface-2)] rounded-[8px] transition-all"
+                className="p-2 text-secondary hover:text-primary hover:bg-[var(--surface-2)] border border-[var(--border-color)] rounded-[8px] transition-all"
                 title="View Activity Logs"
               >
                 <Activity className={`w-4 h-4 ${state.isSyncing ? 'animate-pulse text-[var(--apple-blue)]' : ''}`} />
@@ -116,10 +117,10 @@ export default function BranchView({ state }: { state: DashboardState }) {
               <button
                 onClick={() => state.startCloudSync('selected', true)}
                 disabled={state.isSyncing}
-                className="apple-btn-primary apple-pill flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 text-[15px] font-medium disabled:opacity-50"
+                className="apple-btn-primary apple-pill flex items-center gap-2 px-5 py-2 text-[13px] font-medium disabled:opacity-50"
               >
-                <RefreshCcw className={`w-4 h-4 ${state.isSyncing ? 'animate-spin' : ''}`} />
-                Sync Now
+                <RefreshCcw className={`w-3.5 h-3.5 ${state.isSyncing ? 'animate-spin' : ''}`} />
+                Sync
               </button>
             </div>
           </div>
