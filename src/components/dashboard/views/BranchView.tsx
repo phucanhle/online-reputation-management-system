@@ -1,9 +1,10 @@
 import React from 'react';
 import {
   Star, TrendingUp, TrendingDown, BarChart3,
-  Tags, FilterX, CalendarDays, Search, Activity, RefreshCcw, Loader2, MessageSquareQuote
+  Tags, FilterX, CalendarDays, Search, Activity, RefreshCcw, Loader2, MessageSquareQuote, Download
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import * as XLSX from 'xlsx';
 import { DashboardState } from '../hooks/useDashboardData';
 import ReviewCard from '../components/ReviewCard';
 import MetricsChart from '../components/MetricsChart';
@@ -23,11 +24,61 @@ export default function BranchView({ state }: { state: DashboardState }) {
   } = state;
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  const [exportMonth, setExportMonth] = React.useState('');
   React.useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === 'dark';
 
   const pid = (activeCinema as any).place_id || (activeCinema as any).placeId || '';
   const currentDelta = reviewDeltas?.[pid] ?? 0;
+
+  const handleExport1Star = () => {
+    if (!activeCinema || !activeCinema.reviews) return;
+    if (!exportMonth) {
+      alert('Please select a month to export.');
+      return;
+    }
+
+    const [yearStr, monthStr] = exportMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+
+    const oneStarReviews = activeCinema.reviews.filter((r: any) => {
+      if (Number(r.rating) !== 1) return false;
+      if (!r.isoDate) return false;
+      
+      const d = new Date(r.isoDate);
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+
+    if (oneStarReviews.length === 0) {
+      alert(`No 1-star reviews found for ${exportMonth}`);
+      return;
+    }
+
+    const formatReviewText = (text: string | null): string => {
+      if (!text) return '';
+      try {
+        const parsed = JSON.parse(text);
+        return parsed.vi || parsed.en || Object.values(parsed)[0] as string || text;
+      } catch {
+        return text;
+      }
+    };
+
+    const dataToExport = oneStarReviews.map((r: any) => ({
+      Author: r.authorName || 'Anonymous',
+      Rating: Number(r.rating),
+      Date: r.isoDate ? new Date(r.isoDate).toLocaleDateString('vi-VN') : '',
+      Text: formatReviewText(r.text)
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "1-Star Reviews");
+    
+    const fileName = `${activeCinema.name || activeCinema.place_name || 'Cinema'}_1StarReviews_${exportMonth}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
 
   const kpiCards = [
     {
@@ -162,6 +213,23 @@ export default function BranchView({ state }: { state: DashboardState }) {
                 >
                   <CalendarDays className="w-4 h-4" />
                 </button>
+                {/* Export 1-star */}
+                <div className="flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border-color)] p-0.5 rounded-[8px]">
+                  <input
+                    type="month"
+                    value={exportMonth}
+                    onChange={(e) => setExportMonth(e.target.value)}
+                    className="bg-transparent text-[13px] text-tertiary focus:outline-none px-2 py-1"
+                  />
+                  <button
+                    onClick={handleExport1Star}
+                    className="p-1 px-2 text-tertiary hover:text-amber-500 transition-colors flex items-center gap-1 sf-text-caption text-[13px] font-medium"
+                    title="Export 1-Star Reviews for Selected Month"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export 1-Star</span>
+                  </button>
+                </div>
               </div>
             </div>
 

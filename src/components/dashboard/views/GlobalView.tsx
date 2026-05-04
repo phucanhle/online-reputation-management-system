@@ -1,10 +1,11 @@
 import React from 'react';
 import {
   ShieldCheck, MessageSquareQuote, Building2, AlertTriangle,
-  BarChart3, Star, Activity, TrendingUp, TrendingDown
+  BarChart3, Star, Activity, TrendingUp, TrendingDown, Download
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
+import * as XLSX from 'xlsx';
 import { DashboardState } from '../hooks/useDashboardData';
 import { getTags } from '../utils';
 
@@ -19,6 +20,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [chartReady, setChartReady] = React.useState(false);
+  const [exportMonth, setExportMonth] = React.useState('');
 
   React.useEffect(() => { setMounted(true); }, []);
   React.useEffect(() => {
@@ -29,6 +31,62 @@ export default function GlobalView({ state }: { state: DashboardState }) {
     }
   }, [mounted]);
   const isDark = mounted && resolvedTheme === 'dark';
+
+  const handleExport1StarAll = () => {
+    if (!cinemasWithLatest || cinemasWithLatest.length === 0) return;
+    if (!exportMonth) {
+      alert('Please select a month to export.');
+      return;
+    }
+
+    const [yearStr, monthStr] = exportMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+
+    let all1StarReviews: any[] = [];
+
+    const formatReviewText = (text: string | null): string => {
+      if (!text) return '';
+      try {
+        const parsed = JSON.parse(text);
+        return parsed.vi || parsed.en || Object.values(parsed)[0] as string || text;
+      } catch {
+        return text;
+      }
+    };
+
+    cinemasWithLatest.forEach(cinema => {
+      if (!cinema.reviews) return;
+      const oneStarForCinema = cinema.reviews.filter((r: any) => {
+        if (Number(r.rating) !== 1) return false;
+        if (!r.isoDate) return false;
+        const d = new Date(r.isoDate);
+        return d.getFullYear() === year && d.getMonth() === month;
+      });
+
+      const mapped = oneStarForCinema.map((r: any) => ({
+        Cinema: cinema.name || cinema.place_name || 'Unknown Cinema',
+        Author: r.authorName || 'Anonymous',
+        Rating: Number(r.rating),
+        Date: r.isoDate ? new Date(r.isoDate).toLocaleDateString('vi-VN') : '',
+        Text: formatReviewText(r.text)
+      }));
+
+      all1StarReviews = all1StarReviews.concat(mapped);
+    });
+
+    if (all1StarReviews.length === 0) {
+      alert(`No 1-star reviews found for all cinemas in ${exportMonth}`);
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(all1StarReviews);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "All 1-Star Reviews");
+    
+    const fileName = `AllCinemas_1StarReviews_${exportMonth}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
 
   const kpiCards = [
     {
@@ -281,6 +339,24 @@ export default function GlobalView({ state }: { state: DashboardState }) {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Export all 1-star */}
+            <div className="flex items-center gap-2 bg-[var(--surface-2)] border border-[var(--border-color)] p-0.5 rounded-[8px]">
+              <input
+                type="month"
+                value={exportMonth}
+                onChange={(e) => setExportMonth(e.target.value)}
+                className="bg-transparent text-[13px] text-tertiary focus:outline-none px-2 py-1"
+              />
+              <button
+                onClick={handleExport1StarAll}
+                className="p-1 px-2 text-tertiary hover:text-amber-500 transition-colors flex items-center gap-1 sf-text-caption text-[13px] font-medium"
+                title="Export 1-Star Reviews for Selected Month (All Cinemas)"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export 1-Star</span>
+              </button>
+            </div>
+
             <button
               onClick={() => setCriticalSort((s: 'date' | 'rating') => s === 'date' ? 'rating' : 'date')}
               className="px-3 py-1.5 text-[13px] font-medium text-tertiary hover:text-secondary bg-[var(--surface-2)] border border-[var(--border-color)] rounded-full transition-colors sf-text-caption"
