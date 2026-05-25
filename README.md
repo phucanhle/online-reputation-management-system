@@ -126,13 +126,4 @@ npm run test
 npm run test:e2e
 ```
 
----
 
-## 🐳 Docker Deployment
-
-For standardized production runtimes, spin up the container stack:
-```bash
-# Build and run the entire stack including MongoDB and Dashboard app
-docker-compose up --build -d
-```
-The application will listen on [http://localhost:3000](http://localhost:3000). Health check probes are exposed at [http://localhost:3000/api/health](http://localhost:3000/api/health).
