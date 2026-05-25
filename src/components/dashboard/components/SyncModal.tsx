@@ -16,7 +16,7 @@ export default function SyncModal({ state }: { state: DashboardState }) {
   const [localSearch, setLocalSearch] = React.useState('');
 
   const filtered = cinemasWithLatest.filter(c =>
-    c.name.toLowerCase().includes(localSearch.toLowerCase())
+    (c.name || '').toLowerCase().includes(localSearch.toLowerCase())
   );
 
   const allSelected = selectedCinemasForSync.length === cinemasWithLatest.length;
@@ -106,7 +106,7 @@ export default function SyncModal({ state }: { state: DashboardState }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto custom-scrollbar px-1">
               {filtered.map(cinema => {
                 const isSelected = selectedCinemasForSync.includes(cinema.placeId);
-                const shortName = cinema.name.replace(/LOTTE Cinema\s*/gi, '').trim() || cinema.name;
+                const shortName = (cinema.name || '').replace(/LOTTE Cinema\s*/gi, '').trim() || cinema.name || 'Unknown';
                 return (
                   <button
                     key={cinema.placeId}

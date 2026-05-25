@@ -4,11 +4,12 @@ import {
   Tags, FilterX, CalendarDays, Search, Activity, RefreshCcw, Loader2, MessageSquareQuote, Download
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import * as XLSX from 'xlsx';
+import { ExporterService } from '@/lib/services/exporter';
 import { DashboardState } from '../hooks/useDashboardData';
 import ReviewCard from '../components/ReviewCard';
 import MetricsChart from '../components/MetricsChart';
 import { TAG_MAP, getTags } from '../utils';
+import { Review } from '@/types/database';
 
 export default function BranchView({ state }: { state: DashboardState }) {
   const {
@@ -28,7 +29,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
   React.useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === 'dark';
 
-  const pid = (activeCinema as any).place_id || (activeCinema as any).placeId || '';
+  const pid = activeCinema.place_id || activeCinema.placeId || '';
   const currentDelta = reviewDeltas?.[pid] ?? 0;
 
   const handleExport1Star = () => {
@@ -42,7 +43,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10) - 1;
 
-    const oneStarReviews = activeCinema.reviews.filter((r: any) => {
+    const oneStarReviews = activeCinema.reviews.filter((r: Review) => {
       if (Number(r.rating) !== 1) return false;
       if (!r.isoDate) return false;
       
@@ -55,35 +56,22 @@ export default function BranchView({ state }: { state: DashboardState }) {
       return;
     }
 
-    const formatReviewText = (text: string | null): string => {
-      if (!text) return '';
-      try {
-        const parsed = JSON.parse(text);
-        return parsed.vi || parsed.en || Object.values(parsed)[0] as string || text;
-      } catch {
-        return text;
-      }
-    };
-
-    const dataToExport = oneStarReviews.map((r: any) => ({
-      Author: r.authorName || 'Anonymous',
-      Rating: Number(r.rating),
-      Date: r.isoDate ? new Date(r.isoDate).toLocaleDateString('vi-VN') : '',
-      Text: formatReviewText(r.text)
+    const oneStarReviewsMapped = oneStarReviews.map((r: Review) => ({
+      cinemaName: activeCinema.name || activeCinema.place_name || 'Cinema',
+      authorName: r.authorName,
+      rating: r.rating || 1,
+      isoDate: r.isoDate,
+      text: r.text
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "1-Star Reviews");
-    
-    const fileName = `${activeCinema.name || activeCinema.place_name || 'Cinema'}_1StarReviews_${exportMonth}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    const title = `${activeCinema.name || activeCinema.place_name || 'Cinema'}_1StarReviews_${exportMonth}`;
+    ExporterService.export1StarReviews(title, oneStarReviewsMapped);
   };
 
   const kpiCards = [
     {
       label: 'Avg Rating',
-      val: (activeCinema as any).currentAverageRating?.toFixed(1) ?? '0.0',
+      val: activeCinema.currentAverageRating?.toFixed(1) ?? '0.0',
       sub: 'Official Google',
       icon: Star,
       iconClass: 'fill-amber-500 text-amber-500',
@@ -92,7 +80,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
     },
     {
       label: 'Google Reviews',
-      val: (activeCinema as any).currentTotalReviews?.toLocaleString() ?? '0',
+      val: activeCinema.currentTotalReviews?.toLocaleString() ?? '0',
       sub: currentDelta !== 0
         ? `${currentDelta > 0 ? '+' : ''}${currentDelta} since last update`
         : 'Official count',
@@ -246,17 +234,17 @@ export default function BranchView({ state }: { state: DashboardState }) {
                   <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                   <span className="sf-text-caption text-[13px] font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
                     {filteredReviews.length > 0
-                      ? (filteredReviews.reduce((a: number, b: any) => a + b.rating, 0) / filteredReviews.length).toFixed(1)
+                      ? (filteredReviews.reduce((a: number, b: Review) => a + (b.rating || 0), 0) / filteredReviews.length).toFixed(1)
                       : '0.0'} average
                   </span>
                 </div>
               </div>
             )}
-
+ 
             {/* Review cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredReviews.slice(0, visibleReviewsCount).map((r: any, idx: number) => (
-                <ReviewCard key={r._id || r.reviewId || `review-${idx}`} review={r} highlightedReviewId={highlightedReviewId} />
+              {filteredReviews.slice(0, visibleReviewsCount).map((r: Review, idx: number) => (
+                <ReviewCard key={r._id?.toString() || r.reviewId || `review-${idx}`} review={r} highlightedReviewId={highlightedReviewId} />
               ))}
             </div>
 
@@ -303,16 +291,16 @@ export default function BranchView({ state }: { state: DashboardState }) {
             <div className="p-4 flex flex-col gap-2 max-h-[640px] overflow-y-auto custom-scrollbar">
               {Object.keys(TAG_MAP)
                 .sort((a, b) => {
-                  const ma = activeCinema?.reviews?.filter((r: any) => getTags(r.text).includes(a)) ?? [];
-                  const mb = activeCinema?.reviews?.filter((r: any) => getTags(r.text).includes(b)) ?? [];
-                  const avgA = ma.length > 0 ? ma.reduce((acc: number, cur: any) => acc + cur.rating, 0) / ma.length : 0;
-                  const avgB = mb.length > 0 ? mb.reduce((acc: number, cur: any) => acc + cur.rating, 0) / mb.length : 0;
+                  const ma = activeCinema?.reviews?.filter((r: Review) => getTags(r.text).includes(a)) ?? [];
+                  const mb = activeCinema?.reviews?.filter((r: Review) => getTags(r.text).includes(b)) ?? [];
+                  const avgA = ma.length > 0 ? ma.reduce((acc: number, cur: Review) => acc + (cur.rating || 0), 0) / ma.length : 0;
+                  const avgB = mb.length > 0 ? mb.reduce((acc: number, cur: Review) => acc + (cur.rating || 0), 0) / mb.length : 0;
                   return topicSort === 'rating-desc' ? avgB - avgA : avgA - avgB;
                 })
                 .map(t => {
-                  const mentions = activeCinema?.reviews?.filter((r: any) => getTags(r.text).includes(t)) ?? [];
+                  const mentions = activeCinema?.reviews?.filter((r: Review) => getTags(r.text).includes(t)) ?? [];
                   if (mentions.length === 0) return null;
-                  const avg = (mentions.reduce((a: number, b: any) => a + b.rating, 0) / mentions.length).toFixed(1);
+                  const avg = (mentions.reduce((a: number, b: Review) => a + (b.rating || 0), 0) / mentions.length).toFixed(1);
                   const ratingNum = Number(avg);
                   const ratingColor = ratingNum >= 4
                     ? { text: '#34c759', bg: 'rgba(52,199,89,0.10)' }

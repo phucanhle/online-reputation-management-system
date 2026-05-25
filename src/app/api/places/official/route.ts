@@ -1,5 +1,11 @@
+/**
+ * src/app/api/places/official/route.ts
+ * Next.js API Route for querying place information from places and reviews.
+ */
+
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/mongodb';
+import { logger } from '@/lib/services/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,11 +15,11 @@ export async function GET(req: Request) {
 
   try {
     const db = await getDb();
-    const placesColl = db.collection<any>('places');
-    const reviewsColl = db.collection<any>('reviews');
+    const placesColl = db.collection('places');
+    const reviewsColl = db.collection('reviews');
     
     if (placeId) {
-      // Fetch specific place — prefer official stats from places collection
+      // 1. Fetch specific place
       const placeDoc = await placesColl.findOne({ place_id: placeId });
 
       if (placeDoc) {
@@ -29,8 +35,8 @@ export async function GET(req: Request) {
         });
       }
 
-      // Fallback: aggregate from reviews collection
-      const places = await reviewsColl.aggregate([
+      // 2. Fallback: Aggregate from reviews collection if place record is missing
+      const fallbackResult = await reviewsColl.aggregate<any>([
         { $match: { place_id: placeId } },
         { 
           $group: { 
@@ -43,11 +49,11 @@ export async function GET(req: Request) {
         }
       ]).toArray();
 
-      if (places.length === 0) {
-        return NextResponse.json({ error: 'Place not found in database' }, { status: 404 });
+      if (fallbackResult.length === 0) {
+        return NextResponse.json({ error: 'Place not found in database records' }, { status: 404 });
       }
 
-      const place = places[0];
+      const place = fallbackResult[0];
       const capturedCount = await reviewsColl.countDocuments({ place_id: placeId, is_deleted: { $ne: 1 } });
 
       return NextResponse.json({
@@ -60,7 +66,7 @@ export async function GET(req: Request) {
         lastScraped: place.last_scraped
       });
     } else {
-      // Fetch all places — prefer official stats from places collection
+      // 3. Fetch all places
       const allPlaces = await placesColl.find().toArray();
 
       if (allPlaces.length > 0) {
@@ -81,8 +87,8 @@ export async function GET(req: Request) {
         return NextResponse.json({ data: results });
       }
 
-      // Fallback: aggregate from reviews collection
-      const places = await reviewsColl.aggregate([
+      // 4. Fallback: Aggregate all places from reviews collection
+      const fallbackPlaces = await reviewsColl.aggregate<any>([
         { 
           $group: { 
             _id: '$place_id', 
@@ -94,7 +100,7 @@ export async function GET(req: Request) {
         }
       ]).toArray();
       
-      const results = await Promise.all(places.map(async (place) => {
+      const results = await Promise.all(fallbackPlaces.map(async (place) => {
         const pid = place._id;
         const capturedCount = await reviewsColl.countDocuments({ place_id: pid, is_deleted: { $ne: 1 } });
         return {
@@ -112,7 +118,7 @@ export async function GET(req: Request) {
     }
 
   } catch (error) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    logger.error('[API/Places] Failed to query official places statistics', error);
+    return NextResponse.json({ error: 'Failed to retrieve places statistics' }, { status: 500 });
   }
 }

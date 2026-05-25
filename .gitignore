@@ -58,3 +58,6 @@ prisma/*.db-journal
 *.xlsx
 *.csv
 *.json.bak
+
+# Agent
+.agent/

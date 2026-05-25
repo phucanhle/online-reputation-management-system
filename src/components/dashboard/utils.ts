@@ -7,7 +7,7 @@ export const TAG_MAP: { [key: string]: string[] } = {
   'Price': ['giá', 'đắt', 'rẻ', 'mắc', 'chi phí', 'tiền', 'price', 'expensive', 'cheap']
 };
 
-export const safeParseDate = (dateStr: any) => {
+export const safeParseDate = (dateStr: string | null | undefined): number => {
   if (!dateStr) return 0;
   const clean = typeof dateStr === 'string' ? dateStr.replace(/^\$D/, '') : dateStr;
   const parsed = new Date(clean).getTime();

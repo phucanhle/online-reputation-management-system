@@ -1,13 +1,15 @@
 import React from 'react';
+import Image from 'next/image';
 import {
   ShieldCheck, MessageSquareQuote, Building2, AlertTriangle,
   BarChart3, Star, Activity, TrendingUp, TrendingDown, Download
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
-import * as XLSX from 'xlsx';
+import { ExporterService } from '@/lib/services/exporter';
 import { DashboardState } from '../hooks/useDashboardData';
 import { getTags } from '../utils';
+import { Review } from '@/types/database';
 
 export default function GlobalView({ state }: { state: DashboardState }) {
   const {
@@ -43,36 +45,26 @@ export default function GlobalView({ state }: { state: DashboardState }) {
     const year = parseInt(yearStr, 10);
     const month = parseInt(monthStr, 10) - 1;
 
-    let all1StarReviews: any[] = [];
-
-    const formatReviewText = (text: string | null): string => {
-      if (!text) return '';
-      try {
-        const parsed = JSON.parse(text);
-        return parsed.vi || parsed.en || Object.values(parsed)[0] as string || text;
-      } catch {
-        return text;
-      }
-    };
+    const all1StarReviews: { cinemaName: string; authorName?: string; rating: number; isoDate?: string; text?: string }[] = [];
 
     cinemasWithLatest.forEach(cinema => {
       if (!cinema.reviews) return;
-      const oneStarForCinema = cinema.reviews.filter((r: any) => {
+      const oneStarForCinema = cinema.reviews.filter((r: Review) => {
         if (Number(r.rating) !== 1) return false;
         if (!r.isoDate) return false;
         const d = new Date(r.isoDate);
         return d.getFullYear() === year && d.getMonth() === month;
       });
 
-      const mapped = oneStarForCinema.map((r: any) => ({
-        Cinema: cinema.name || cinema.place_name || 'Unknown Cinema',
-        Author: r.authorName || 'Anonymous',
-        Rating: Number(r.rating),
-        Date: r.isoDate ? new Date(r.isoDate).toLocaleDateString('vi-VN') : '',
-        Text: formatReviewText(r.text)
-      }));
-
-      all1StarReviews = all1StarReviews.concat(mapped);
+      oneStarForCinema.forEach((r: Review) => {
+        all1StarReviews.push({
+          cinemaName: cinema.name || cinema.place_name || 'Unknown Cinema',
+          authorName: r.authorName,
+          rating: r.rating || 1,
+          isoDate: r.isoDate,
+          text: r.text
+        });
+      });
     });
 
     if (all1StarReviews.length === 0) {
@@ -80,12 +72,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
       return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(all1StarReviews);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "All 1-Star Reviews");
-    
-    const fileName = `AllCinemas_1StarReviews_${exportMonth}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    ExporterService.export1StarReviews(`AllCinemas_1StarReviews_${exportMonth}`, all1StarReviews);
   };
 
   const kpiCards = [
@@ -269,9 +256,9 @@ export default function GlobalView({ state }: { state: DashboardState }) {
               >
                 Review Fluctuation
               </h3>
-              {globalData.reviewFluctuationAlerts.filter((a: any) => a.delta < 0).length > 0 && (
+              {globalData.reviewFluctuationAlerts.filter((a) => a.delta < 0).length > 0 && (
                 <span className="px-2 py-0.5 bg-[#ff453a]/10 text-[#ff453a] text-[11px] font-bold rounded-[980px] tabular-nums">
-                  {globalData.reviewFluctuationAlerts.filter((a: any) => a.delta < 0).length} decreased
+                  {globalData.reviewFluctuationAlerts.filter((a) => a.delta < 0).length} decreased
                 </span>
               )}
             </div>
@@ -281,7 +268,7 @@ export default function GlobalView({ state }: { state: DashboardState }) {
           </div>
           <div className="p-6 pt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {globalData.reviewFluctuationAlerts.map((alert: any, idx: number) => {
+              {globalData.reviewFluctuationAlerts.map((alert: { placeId: string; name: string; totalReviews: number; delta: number }, idx: number) => {
                 const isDecrease = alert.delta < 0;
                 return (
                   <button
@@ -400,13 +387,20 @@ export default function GlobalView({ state }: { state: DashboardState }) {
                   {/* Author row */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <img
-                        src={alert.authorThumbnail || `https://ui-avatars.com/api/?name=${alert.authorName || 'User'}&background=random`}
-                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                        alt=""
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                      />
+                      {(() => {
+                        const avatarUrl = alert.authorThumbnail || `https://ui-avatars.com/api/?name=${encodeURIComponent(alert.authorName || 'User')}&background=random`;
+                        const isWhitelisted = avatarUrl.includes('googleusercontent.com') || avatarUrl.includes('ui-avatars.com');
+                        return (
+                          <Image
+                            src={avatarUrl}
+                            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            alt={alert.authorName || 'User avatar'}
+                            width={40}
+                            height={40}
+                            unoptimized={!isWhitelisted}
+                          />
+                        );
+                      })()}
                       <div className="overflow-hidden">
                         <p className="sf-text-body text-[15px] font-semibold text-primary truncate">
                           {alert.authorName}

@@ -1,44 +1,64 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 import dns from 'dns';
+import { config } from '@/lib/config/config';
+import { logger } from '@/lib/services/logger';
 
-// Proactively fix DNS resolution issues for MongoDB SRV records
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+// Set DNS servers for SRV record resolutions in node environments where default servers fail
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+  logger.info('[DB] Custom DNS servers set successfully.');
+} catch (err) {
+  logger.warn('[DB] Failed to set custom DNS servers, relying on environment defaults.', { error: String(err) });
+}
 
-const uri = process.env.MONGODB_URI as string;
+const uri = config.mongodbUri;
 const options = {};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-if (!process.env.MONGODB_URI) {
+if (!uri) {
   throw new Error('Please add your Mongo URI to .env');
 }
 
-console.log(`[DB] Attempting connection to MongoDB cluster...`);
+logger.info('[DB] Initializing MongoDB connection client...');
 
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof globalThis & {
+if (config.isDev) {
+  // Use global client preservation in dev for HMR (Hot Module Replacement)
+  const globalWithMongo = global as typeof globalThis & {
     _mongoClientPromise?: Promise<MongoClient>;
   };
 
   if (!globalWithMongo._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+    globalWithMongo._mongoClientPromise = client.connect()
+      .then((conn) => {
+        logger.info('[DB] MongoDB client connected successfully in development (HMR).');
+        return conn;
+      })
+      .catch((err) => {
+        logger.error('[DB] MongoDB connection failed in development', err);
+        throw err;
+      });
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
-  // In production mode, it's best to not use a global variable.
   client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  clientPromise = client.connect()
+    .then((conn) => {
+      logger.info('[DB] MongoDB client connected successfully in production.');
+      return conn;
+    })
+    .catch((err) => {
+      logger.error('[DB] MongoDB connection failed in production', err);
+      throw err;
+    });
 }
 
-// Export a module-scoped MongoClient promise.
 export default clientPromise;
 
-export async function getDb() {
+export async function getDb(): Promise<Db> {
   const client = await clientPromise;
-  // Explicitly connect to the 'reviews_clean' database cluster
+  // Use DB name from connection string or default to 'reviews'
   return client.db('reviews');
 }

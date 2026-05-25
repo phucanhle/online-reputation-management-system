@@ -19,10 +19,22 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
 
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+  const [localQuery, setLocalQuery] = React.useState(searchQuery);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  React.useEffect(() => {
+    setLocalQuery(searchQuery);
+  }, [searchQuery]);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchQuery(localQuery);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [localQuery, setSearchQuery]);
 
   const isDark = mounted && resolvedTheme === 'dark';
   const pageTitle = viewMode === 'global' ? 'Overview' : (activeCinema?.name ?? '');
@@ -59,7 +71,7 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
 
         {viewMode === 'branch' && activeCinema && (
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeCinema.name)}&query_place_id=${activeCinema.placeId}`}
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activeCinema.name || '')}&query_place_id=${activeCinema.placeId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 p-2 text-[var(--link-color)] hover:bg-[var(--surface-2)] rounded-[8px] transition-colors"
@@ -78,13 +90,13 @@ export default function DashboardHeader({ state }: { state: DashboardState }) {
           <input
             type="text"
             placeholder="Search reviews..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            value={localQuery}
+            onChange={e => setLocalQuery(e.target.value)}
             className="w-full h-8 bg-[var(--surface-2)] border border-[var(--border-color)] focus:border-[var(--apple-blue)] rounded-[11px] pl-9 pr-8 text-primary placeholder:text-tertiary outline-none transition-all sf-text-caption"
           />
-          {searchQuery && (
+          {localQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => { setLocalQuery(''); setSearchQuery(''); }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-tertiary hover:text-secondary transition-colors"
             >
               <X className="w-3.5 h-3.5" />

@@ -1,8 +1,10 @@
 import React from 'react';
+import Image from 'next/image';
 import { Star, CalendarDays } from 'lucide-react';
 import { getTags } from '../utils';
+import { Review } from '@/types/database';
 
-function formatReviewDate(isoDate: string | null, rawDate: string | null) {
+function formatReviewDate(isoDate: string | null | undefined, rawDate: string | null | undefined): string {
   if (!isoDate) return rawDate || 'Recently';
   const date = new Date(isoDate);
   const now = new Date();
@@ -17,7 +19,7 @@ function formatReviewDate(isoDate: string | null, rawDate: string | null) {
   return rawDate || date.toLocaleDateString('vi-VN');
 }
 
-function formatReviewText(text: string | null): string {
+function formatReviewText(text: string | null | undefined): string {
   if (!text) return '';
   try {
     const parsed = JSON.parse(text);
@@ -27,11 +29,11 @@ function formatReviewText(text: string | null): string {
   }
 }
 
-export default function ReviewCard({
+function ReviewCard({
   review: r,
   highlightedReviewId,
 }: {
-  review: any;
+  review: Review;
   highlightedReviewId: string | null;
 }) {
   const isHighlighted = highlightedReviewId === r.reviewId;
@@ -47,6 +49,10 @@ export default function ReviewCard({
       ? { badge: '#f59e0b', badgeBg: 'rgba(245,158,11,0.10)' }
       : { badge: '#ff3b30', badgeBg: 'rgba(255,59,48,0.10)' };
 
+  const avatarUrl = r.authorThumbnail || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.authorName || 'User')}&background=random`;
+  // Safe check if image domain is whitelisted
+  const isWhitelisted = avatarUrl.includes('googleusercontent.com') || avatarUrl.includes('ui-avatars.com');
+
   return (
     <div
       id={`review-${r.reviewId}`}
@@ -60,12 +66,13 @@ export default function ReviewCard({
       {/* Author row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <img
-            src={r.authorThumbnail || `https://ui-avatars.com/api/?name=${r.authorName || 'User'}&background=random`}
+          <Image
+            src={avatarUrl}
             className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-            alt=""
-            referrerPolicy="no-referrer"
-            loading="lazy"
+            alt={r.authorName || 'User avatar'}
+            width={40}
+            height={40}
+            unoptimized={!isWhitelisted}
           />
           <div className="min-w-0">
             <p className="sf-text-body text-[15px] font-semibold text-primary truncate">
@@ -127,3 +134,5 @@ export default function ReviewCard({
     </div>
   );
 }
+
+export default React.memo(ReviewCard);

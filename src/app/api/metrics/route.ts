@@ -1,37 +1,25 @@
+/**
+ * src/app/api/metrics/route.ts
+ * Next.js API Route for querying daily snapshots and deltas of cinema branches.
+ */
+
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/mongodb';
-import { BranchDailyMetrics } from '@/types/database';
+import { MetricsService } from '@/lib/services/metricsService';
+import { logger } from '@/lib/services/logger';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const cinemaId = searchParams.get('cinemaId');
-  const start = searchParams.get('start');
-  const end = searchParams.get('end');
+  const start = searchParams.get('start') || undefined;
+  const end = searchParams.get('end') || undefined;
   const includeDelta = searchParams.get('includeDelta') === 'true';
 
   try {
-    const db = await getDb();
-    const metricsColl = db.collection<BranchDailyMetrics>('branch_daily_metrics');
-
-    // If requesting deltas for all cinemas (global view)
+    // 1. Fetch latest branch snapshots for global view
     if (includeDelta && !cinemaId) {
-      // Get the latest snapshot per place_id with review_delta
-      const latestSnapshots = await metricsColl.aggregate([
-        { $sort: { date: -1 } },
-        {
-          $group: {
-            _id: '$place_id',
-            date: { $first: '$date' },
-            total_reviews: { $first: '$total_reviews' },
-            avg_rating: { $first: '$avg_rating' },
-            review_delta: { $first: '$review_delta' },
-            sentiment_score: { $first: '$sentiment_score' },
-            density_30d: { $first: '$density_30d' },
-          }
-        }
-      ]).toArray();
+      const latestSnapshots = await MetricsService.getLatestSnapshots();
 
       return NextResponse.json({
         type: 'deltas',
@@ -49,20 +37,11 @@ export async function GET(request: Request) {
     }
 
     if (!cinemaId) {
-      return NextResponse.json({ error: 'cinemaId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'cinemaId parameter is required' }, { status: 400 });
     }
 
-    const filter: any = { place_id: cinemaId };
-
-    if (start || end) {
-      filter.date = {};
-      if (start) filter.date.$gte = new Date(start);
-      if (end) filter.date.$lte = new Date(end);
-    }
-
-    const metrics = await metricsColl.find(filter)
-      .sort({ date: 1 }) // Chronological order for charts
-      .toArray();
+    // 2. Fetch specific branch metrics history
+    const metrics = await MetricsService.getBranchMetrics(cinemaId, start, end);
 
     return NextResponse.json({
       cinemaId,
@@ -70,7 +49,7 @@ export async function GET(request: Request) {
       metrics
     });
   } catch (error) {
-    console.error('API Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 });
+    logger.error('[API/Metrics] Failed to fetch metrics', error);
+    return NextResponse.json({ error: 'Failed to fetch metrics database records.' }, { status: 500 });
   }
 }

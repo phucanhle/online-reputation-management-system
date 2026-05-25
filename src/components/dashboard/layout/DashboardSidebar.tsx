@@ -1,7 +1,6 @@
 import React from 'react';
 import { Globe, Search, X, Building2, DownloadCloud, Activity, ArrowUpDown } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { getTags } from '../utils';
+import { ExporterService } from '@/lib/services/exporter';
 import { DashboardState } from '../hooks/useDashboardData';
 
 export default function DashboardSidebar({ state }: { state: DashboardState }) {
@@ -16,35 +15,21 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
   } = state;
 
   const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
-
-    const overviewData = cinemasWithLatest.map(c => ({
-      "Cinema Name": c.place_name,
-      "New Google Reviews": c.currentTotalReviews,
-      "Average Rating": c.currentAverageRating.toFixed(2),
-    }));
-    const wsOverview = XLSX.utils.json_to_sheet(overviewData);
-    XLSX.utils.book_append_sheet(wb, wsOverview, "OVERVIEW");
-
-    cinemasWithLatest.forEach(c => {
-      const cinemaReviews = c.reviews.map((r: any) => ({
-        "Date": r.date,
-        "Author": r.authorName,
-        "Rating": r.rating,
-        "Review": r.text,
-        "Translated": r.translated || "",
-        "Tags": getTags(r.text).join(", "),
-        "Local Guide": r.localGuide ? "Yes" : "No",
-        "Likes": r.likes || 0
-      }));
-      cinemaReviews.sort((a: any, b: any) => b.Rating - a.Rating);
-      const wsCinema = XLSX.utils.json_to_sheet(cinemaReviews);
-      const safeName = (c.place_name || 'Unknown').replace(/[\[\]\*\?\/\\]/g, "").substring(0, 31);
-      XLSX.utils.book_append_sheet(wb, wsCinema, safeName);
-    });
-
-    XLSX.writeFile(wb, `ORMS_Audit_${new Date().toISOString().split('T')[0]}.xlsx`);
+    ExporterService.exportAuditReport(cinemasWithLatest);
   };
+
+  const [localCinemaQuery, setLocalCinemaQuery] = React.useState(cinemaSearchQuery);
+
+  React.useEffect(() => {
+    setLocalCinemaQuery(cinemaSearchQuery);
+  }, [cinemaSearchQuery]);
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setCinemaSearchQuery(localCinemaQuery);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [localCinemaQuery, setCinemaSearchQuery]);
 
   const cycleSidebarSort = () => {
     setSidebarSort((s: 'name' | 'rating-desc' | 'rating-asc') => s === 'name' ? 'rating-desc' : s === 'rating-desc' ? 'rating-asc' : 'name');
@@ -135,13 +120,13 @@ export default function DashboardSidebar({ state }: { state: DashboardState }) {
             <input
               type="text"
               placeholder="Find branch..."
-              value={cinemaSearchQuery}
-              onChange={e => setCinemaSearchQuery(e.target.value)}
+              value={localCinemaQuery}
+              onChange={e => setLocalCinemaQuery(e.target.value)}
               className="w-full h-8 bg-[var(--surface-2)] border border-[var(--border-color)] focus:border-[var(--apple-blue)] rounded-[11px] pl-9 pr-8 text-[13px] text-primary placeholder:text-tertiary outline-none transition-all sf-text-caption"
             />
-            {cinemaSearchQuery && (
+            {localCinemaQuery && (
               <button
-                onClick={() => setCinemaSearchQuery('')}
+                onClick={() => { setLocalCinemaQuery(''); setCinemaSearchQuery(''); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary hover:text-secondary transition-colors"
               >
                 <X className="w-3.5 h-3.5" />

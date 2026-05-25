@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.2",
@@ -24,6 +28,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -31,6 +37,7 @@
     "dotenv": "^17.4.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "jest": "^30.4.2",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
     "typescript": "^5"

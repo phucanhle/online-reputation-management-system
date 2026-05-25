@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
 
-const nextConfig: any = {
-  // Add other configurations as needed
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

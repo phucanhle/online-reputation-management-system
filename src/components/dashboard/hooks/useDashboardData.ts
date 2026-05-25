@@ -1,11 +1,28 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { safeParseDate, getTags } from '../utils';
+import {
+  CinemaWithReviews,
+  CinemaWithLatest,
+  Review,
+  BranchAggregate,
+  BranchDailyMetrics
+} from '@/types/database';
+
+export interface SyncLog {
+  cinema: string;
+  status: 'loading' | 'success' | 'error';
+  message?: string;
+  jobId?: string;
+  reviewCount?: number;
+  phase?: string;
+  placeName?: string;
+}
 
 export function useDashboardData(
-  cinemas: any[],
-  globalMetrics: { totalReviews: number, avgRating: number },
-  branchAggregates: any[]
+  cinemas: CinemaWithReviews[],
+  globalMetrics: { totalReviews: number; avgRating: number },
+  branchAggregates: BranchAggregate[]
 ) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -17,7 +34,7 @@ export function useDashboardData(
   const [cinemaSearchQuery, setCinemaSearchQuery] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
-  const [syncLogs, setSyncLogs] = useState<any[]>([]);
+  const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
   const [selectedCinemasForSync, setSelectedCinemasForSync] = useState<string[]>([]);
   const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
@@ -28,13 +45,11 @@ export function useDashboardData(
   const [topicSort, setTopicSort] = useState<'rating-desc' | 'rating-asc'>('rating-desc');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isActivityDrawerOpen, setIsActivityDrawerOpen] = useState(false);
-  const [extraReviews, setExtraReviews] = useState<Record<string, any[]>>({});
+  const [extraReviews, setExtraReviews] = useState<Record<string, Review[]>>({});
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [reviewPages, setReviewPages] = useState<Record<string, number>>({});
   const [totalReviewsAvailable, setTotalReviewsAvailable] = useState<Record<string, number>>({});
-  const [historicalMetrics, setHistoricalMetrics] = useState<any[]>([]);
-  const [isMetricsLoading, setIsMetricsLoading] = useState(false);
-  const [officialStatsMap, setOfficialStatsMap] = useState<Record<string, { avgRating: number, totalReviews: number, capturedReviews: number }>>({});
+  const [officialStatsMap, setOfficialStatsMap] = useState<Record<string, { avgRating: number; totalReviews: number; capturedReviews: number }>>({});
   const [reviewDeltas, setReviewDeltas] = useState<Record<string, number>>({});
 
   // -- Debounced States for Search Optimization --
@@ -62,7 +77,7 @@ export function useDashboardData(
         const res = await fetch('/api/places/official');
         const data = await res.json();
         if (data.data) {
-          const map: Record<string, { avgRating: number, totalReviews: number, capturedReviews: number }> = {};
+          const map: Record<string, { avgRating: number; totalReviews: number; capturedReviews: number }> = {};
           data.data.forEach((p: any) => {
             map[p.placeId] = {
               avgRating: p.avgRating,
@@ -97,7 +112,7 @@ export function useDashboardData(
 
   // Create lookups for faster compute
   const aggregateMap = useMemo(() => {
-    const map: Record<string, any> = {};
+    const map: Record<string, { count: number; rating: number; sentiment: number; density: number; distribution: any }> = {};
     branchAggregates.forEach(agg => {
       map[agg.cinemaId] = {
         count: agg._count._all,
@@ -111,30 +126,28 @@ export function useDashboardData(
   }, [branchAggregates]);
 
   // --- Processed Cinemas with Latest Metrics ---
-  const cinemasWithLatest = useMemo(() => {
+  const cinemasWithLatest = useMemo((): CinemaWithLatest[] => {
     return cinemas.map(c => {
-      // DB uses place_id (snake_case); after mapping, cinema has placeId (camelCase) — try both
-      const pid = c.place_id || c.placeId || '';
+      const pid = c.placeId || '';
       const agg = aggregateMap[pid];
 
-      const currentTotalReviews = officialStatsMap[pid]?.totalReviews ?? agg?.count ?? 0;
-      const currentAverageRating = officialStatsMap[pid]?.avgRating ?? agg?.rating ?? 0;
+      const currentTotalReviews = officialStatsMap[pid]?.totalReviews ?? agg?.count ?? c.totalReviews ?? 0;
+      const currentAverageRating = officialStatsMap[pid]?.avgRating ?? agg?.rating ?? c.avgRating ?? 0;
       const capturedReviews = officialStatsMap[pid]?.capturedReviews ?? c.reviews?.length ?? 0;
 
-      // Merge initial reviews with extra reviews loaded via API and filter out deleted reviews
       const rawCombined = [...(c.reviews || []), ...(extraReviews[pid] || [])];
-      const combinedReviews = rawCombined.filter((r: any) => r.is_deleted !== 1 && r.isDeleted !== 1 && r.isDelete !== 1);
+      const combinedReviews = rawCombined.filter((r: Review) => r.isDeleted !== 1);
 
       return {
         ...c,
-        place_id: pid, // ensure place_id is always set
+        place_id: pid,
         currentTotalReviews,
         currentAverageRating,
         capturedReviews,
         sentimentScore: agg?.sentiment ?? 0,
         feedbackDensity: agg?.density ?? 0,
         starDistribution: agg?.distribution ?? null,
-        reviews: combinedReviews.map((r: any) => ({ ...r, tags: getTags(r.text) }))
+        reviews: combinedReviews.map((r: Review) => ({ ...r, tags: getTags(r.text) }))
       };
     });
   }, [cinemas, aggregateMap, extraReviews, officialStatsMap]);
@@ -166,7 +179,7 @@ export function useDashboardData(
   };
 
   const filteredCinemas = useMemo(() => {
-    let result = cinemasWithLatest.filter(c =>
+    const result = cinemasWithLatest.filter(c =>
       (c.name || '').toLowerCase().includes(debouncedCinemaSearchQuery.toLowerCase())
     );
 
@@ -179,27 +192,30 @@ export function useDashboardData(
 
   // --- Compute Global Data ---
   const globalData = useMemo(() => {
-    const branchRatings: { name: string, rating: number, count: number, placeId: string }[] = [];
+    const branchRatings: { name: string; rating: number; count: number; placeId: string }[] = [];
     const recentNegative: any[] = [];
     const sentimentCounts = [0, 0, 0, 0, 0];
 
     cinemasWithLatest.forEach(c => {
       branchRatings.push({
-        name: c.place_name,
+        name: c.name || 'Unknown Cinema',
         rating: c.currentAverageRating,
         count: c.currentTotalReviews,
         placeId: c.place_id
       });
 
-      // Filter critical alerts (all-time since timeFilter removed)
-      c.reviews.forEach((r: any) => {
-        if (r.rating <= 2) recentNegative.push({
-          ...r,
-          cinemaName: c.name,
-          placeId: c.placeId,
-          mapsSearchUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.name)}&query_place_id=${c.placeId}`
-        });
-        if (r.rating >= 1 && r.rating <= 5) sentimentCounts[r.rating - 1]++;
+      c.reviews.forEach((r) => {
+        if (r.rating !== undefined && r.rating <= 2) {
+          recentNegative.push({
+            ...r,
+            cinemaName: c.name,
+            placeId: c.place_id,
+            mapsSearchUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.name || '')}&query_place_id=${c.place_id}`
+          });
+        }
+        if (r.rating !== undefined && r.rating >= 1 && r.rating <= 5) {
+          sentimentCounts[r.rating - 1]++;
+        }
       });
     });
 
@@ -213,26 +229,24 @@ export function useDashboardData(
       return safeParseDate(b.isoDate) - safeParseDate(a.isoDate);
     }).slice(0, 50);
 
-    // Calculate dynamic global stats based on officialStatsMap (if available) or server fallback
-    const totalGoogleReviews = cinemasWithLatest.reduce((acc, c: any) => acc + (c.currentTotalReviews || 0), 0);
-    const totalCapturedReviews = cinemasWithLatest.reduce((acc, c: any) => acc + (c.capturedReviews || 0), 0);
-    const weightedSum = cinemasWithLatest.reduce((acc, c: any) => acc + ((c.currentAverageRating || 0) * (c.currentTotalReviews || 0)), 0);
+    const totalGoogleReviews = cinemasWithLatest.reduce((acc, c) => acc + (c.currentTotalReviews || 0), 0);
+    const totalCapturedReviews = cinemasWithLatest.reduce((acc, c) => acc + (c.capturedReviews || 0), 0);
+    const weightedSum = cinemasWithLatest.reduce((acc, c) => acc + ((c.currentAverageRating || 0) * (c.currentTotalReviews || 0)), 0);
     const dynamicAvgRating = totalGoogleReviews > 0 ? (weightedSum / totalGoogleReviews) : globalMetrics.avgRating;
 
-    // --- Review Fluctuation Alerts (from deltas) ---
     const reviewFluctuationAlerts = cinemasWithLatest
       .map(c => {
-        const pid = c.place_id || c.placeId;
+        const pid = c.place_id;
         const delta = reviewDeltas[pid] ?? 0;
         return {
           placeId: pid,
-          name: c.place_name || c.name,
+          name: c.name || 'Unknown Cinema',
           totalReviews: c.currentTotalReviews,
           delta,
         };
       })
       .filter(a => a.delta !== 0)
-      .sort((a, b) => a.delta - b.delta); // Most negative first
+      .sort((a, b) => a.delta - b.delta);
 
     return {
       avgRating: dynamicAvgRating.toFixed(2),
@@ -252,14 +266,16 @@ export function useDashboardData(
     };
   }, [cinemasWithLatest, leaderboardSort, criticalSort, globalMetrics, reviewDeltas]);
 
-  const activeCinema = useMemo(() => cinemasWithLatest.find(c => c.placeId === activeTab) || cinemasWithLatest[0], [cinemasWithLatest, activeTab]);
+  const activeCinema = useMemo((): CinemaWithLatest => {
+    return cinemasWithLatest.find(c => c.placeId === activeTab) || cinemasWithLatest[0];
+  }, [cinemasWithLatest, activeTab]);
 
   const filteredReviews = useMemo(() => {
     if (!activeCinema) return [];
     const q = debouncedSearchQuery.toLowerCase();
 
-    let result = activeCinema.reviews.filter((r: any) => {
-      const ratingMatch = selectedRatings.length === 0 || selectedRatings.includes(r.rating);
+    const result = activeCinema.reviews.filter((r) => {
+      const ratingMatch = selectedRatings.length === 0 || (r.rating !== undefined && selectedRatings.includes(r.rating));
       const textMatch = !q || (r.text?.toLowerCase().includes(q)) || (r.authorName?.toLowerCase().includes(q));
 
       const reviewTags = r.tags || [];
@@ -267,7 +283,7 @@ export function useDashboardData(
 
       return ratingMatch && textMatch && tagMatch;
     });
-    return result.sort((a: any, b: any) => {
+    return result.sort((a, b) => {
       const dateA = safeParseDate(a.isoDate);
       const dateB = safeParseDate(b.isoDate);
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
@@ -276,45 +292,41 @@ export function useDashboardData(
 
   useEffect(() => {
     if (highlightedReviewId) {
-      // Ensure the highlighted review is visible
-      setVisibleReviewsCount(prev => Math.max(prev, (filteredReviews.findIndex((r: any) => r.reviewId === highlightedReviewId) + 1) || 20));
+      setVisibleReviewsCount(prev => Math.max(prev, (filteredReviews.findIndex(r => r.reviewId === highlightedReviewId) + 1) || 20));
 
       setTimeout(() => {
         const el = document.getElementById(`review-${highlightedReviewId}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 500); // Wait for tab switch and render
+      }, 500);
       const timer = setTimeout(() => setHighlightedReviewId(null), 5000);
       return () => clearTimeout(timer);
     }
   }, [highlightedReviewId, filteredReviews]);
 
-  // --- Sync Integration (Local Python Scraper via /api/scrape) ---
   const startCloudSync = async (target: 'all' | 'selected', officialOnly: boolean = false) => {
     setIsSyncing(true);
     setIsSyncModalOpen(false);
-    setSyncLogs([{ cinema: 'System', status: 'loading', message: officialOnly ? 'Đang thực hiện đồng bộ nhanh...' : 'Đang khởi động Python scraper...' }]);
+    setSyncLogs([{ cinema: 'System', status: 'loading', message: officialOnly ? 'Đang thực hiện đồng bộ nhanh...' : 'Đang khởi động scraper...' }]);
 
     try {
-      let selectedData: { id: string, url: string, name: string }[] = [];
+      let selectedData: { id: string; url: string; name: string }[] = [];
       
       if (target === 'selected') {
-        // If specific cinemas were selected in the sync modal, use those
         if (selectedCinemasForSync.length > 0) {
           selectedData = cinemasWithLatest
             .filter(c => selectedCinemasForSync.includes(c.placeId))
             .map(c => ({
               id: c.placeId,
               url: c.originalUrl || '',
-              name: c.name
+              name: c.name || ''
             }));
         } else if (activeCinema) {
-          // Fallback: use the currently active cinema (from BranchView Sync button)
           selectedData = [{
             id: activeCinema.placeId,
             url: activeCinema.originalUrl || '',
-            name: activeCinema.name
+            name: activeCinema.name || ''
           }];
         }
       }
@@ -352,12 +364,11 @@ export function useDashboardData(
               return [...prev, update];
             });
           } catch (e) {
-            // ignore parse errors
+            // ignore JSON parse errors in ND-JSON stream
           }
         }
       }
 
-      // Refresh page data after sync completes
       setTimeout(() => {
         router.refresh();
         setIsSyncing(false);
@@ -369,7 +380,6 @@ export function useDashboardData(
       setIsSyncing(false);
     }
   };
-
 
   return {
     mounted,
