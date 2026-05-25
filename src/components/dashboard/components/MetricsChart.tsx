@@ -11,7 +11,7 @@ type Granularity = 'daily' | 'weekly' | 'monthly';
 
 interface MetricsChartProps {
   placeId: string;
-  placeName: string;
+  _placeName: string;
 }
 
 interface MetricPoint {
@@ -124,7 +124,7 @@ const METRIC_CONFIG: Record<ChartMetric, { label: string; color: string; gradien
   },
 };
 
-export default function MetricsChart({ placeId, placeName }: MetricsChartProps) {
+export default function MetricsChart({ placeId, _placeName }: MetricsChartProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [chartReady, setChartReady] = useState(false);

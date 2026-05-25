@@ -1,6 +1,6 @@
 import { getDb } from '@/lib/mongodb';
 import DashboardClient from '@/components/DashboardClient';
-import { Cinema, Review } from '@/types/database';
+import { Review } from '@/types/database';
 import { mapCinema, mapReview } from '@/lib/mappers';
 
 export const dynamic = 'force-dynamic';

@@ -5,8 +5,7 @@ import {
   CinemaWithReviews,
   CinemaWithLatest,
   Review,
-  BranchAggregate,
-  BranchDailyMetrics
+  BranchAggregate
 } from '@/types/database';
 
 export interface SyncLog {
@@ -363,7 +362,7 @@ export function useDashboardData(
               }
               return [...prev, update];
             });
-          } catch (e) {
+          } catch (_e) {
             // ignore JSON parse errors in ND-JSON stream
           }
         }

@@ -1,5 +1,4 @@
 import { MetricsService } from '@/lib/services/metricsService';
-import { getDb } from '@/lib/mongodb';
 
 // Mock the MongoDB connection module
 jest.mock('@/lib/mongodb', () => {
@@ -8,7 +7,7 @@ jest.mock('@/lib/mongodb', () => {
   const mockFindOne = jest.fn();
   const mockUpdateOne = jest.fn();
   
-  const mockCollection = jest.fn((name: string) => {
+  const mockCollection = jest.fn((_name: string) => {
     return {
       aggregate: mockAggregate,
       findOne: mockFindOne,
@@ -35,8 +34,7 @@ describe('MetricsService Integration Tests', () => {
   const { 
     _mockToArray, 
     _mockFindOne, 
-    _mockUpdateOne,
-    _mockAggregate
+    _mockUpdateOne
   } = require('@/lib/mongodb');
 
   beforeEach(() => {

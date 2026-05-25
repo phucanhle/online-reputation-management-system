@@ -28,7 +28,7 @@ export function mapReview(doc: any): Review {
       try {
         const parsed = JSON.parse(doc.review_text);
         text = parsed.vi || parsed.en || Object.values(parsed)[0] as string || '';
-      } catch (e) {
+      } catch {
         text = doc.review_text;
       }
     } else {

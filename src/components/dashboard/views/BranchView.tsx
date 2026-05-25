@@ -1,9 +1,8 @@
 import React from 'react';
 import {
-  Star, TrendingUp, TrendingDown, BarChart3,
+  Star, TrendingUp,
   Tags, FilterX, CalendarDays, Search, Activity, RefreshCcw, Loader2, MessageSquareQuote, Download
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { ExporterService } from '@/lib/services/exporter';
 import { DashboardState } from '../hooks/useDashboardData';
 import ReviewCard from '../components/ReviewCard';
@@ -15,7 +14,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
   const {
     activeCinema,
     selectedTags, setSelectedTags,
-    sortOrder, setSortOrder,
+    setSortOrder,
     searchQuery,
     filteredReviews,
     visibleReviewsCount,
@@ -23,11 +22,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
     topicSort, setTopicSort,
     reviewDeltas,
   } = state;
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
   const [exportMonth, setExportMonth] = React.useState('');
-  React.useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted && resolvedTheme === 'dark';
 
   const pid = activeCinema.place_id || activeCinema.placeId || '';
   const currentDelta = reviewDeltas?.[pid] ?? 0;
@@ -130,7 +125,7 @@ export default function BranchView({ state }: { state: DashboardState }) {
           {/* Performance Metrics Chart */}
           <MetricsChart
             placeId={pid}
-            placeName={activeCinema.name || activeCinema.place_name || ''}
+            _placeName={activeCinema.name || activeCinema.place_name || ''}
           />
 
           {/* Sync Controls */}

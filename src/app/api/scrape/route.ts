@@ -3,7 +3,7 @@
  * Next.js API Route for triggering and monitoring Google Maps crawl operations.
  */
 
-import { NextResponse } from 'next/server';
+
 import { ScraperService, ScraperJobStatus } from '@/lib/services/scraperService';
 import { MetricsService, SyncProgressUpdate } from '@/lib/services/metricsService';
 import { config } from '@/lib/config/config';

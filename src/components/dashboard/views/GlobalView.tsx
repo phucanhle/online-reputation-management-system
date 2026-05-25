@@ -5,7 +5,6 @@ import {
   BarChart3, Star, Activity, TrendingUp, TrendingDown, Download
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { useTheme } from 'next-themes';
 import { ExporterService } from '@/lib/services/exporter';
 import { DashboardState } from '../hooks/useDashboardData';
 import { getTags } from '../utils';
@@ -19,7 +18,6 @@ export default function GlobalView({ state }: { state: DashboardState }) {
     criticalSort, setCriticalSort,
     setActiveTab, setViewMode, setHighlightedReviewId
   } = state;
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [chartReady, setChartReady] = React.useState(false);
   const [exportMonth, setExportMonth] = React.useState('');
@@ -32,7 +30,6 @@ export default function GlobalView({ state }: { state: DashboardState }) {
       return () => clearTimeout(timer);
     }
   }, [mounted]);
-  const isDark = mounted && resolvedTheme === 'dark';
 
   const handleExport1StarAll = () => {
     if (!cinemasWithLatest || cinemasWithLatest.length === 0) return;
